@@ -3,3 +3,7 @@ linker = "aarch64-unknown-linux-musl-gcc"
 
 [target.thumbv7em-none-eabihf]
 linker = "arm-none-eabi-gcc"
+
+[alias]
+build-radio = "build -p radio --target aarch64-unknown-linux-musl"
+build-powertrain = "build -p powertrain --target thumbv7em-none-eabihf"
