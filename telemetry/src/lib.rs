@@ -13,7 +13,7 @@ pub struct CarConfiguration {
     pub team_name: String,   // Team name
 }
 
-impl CarConfiguration {
+impl Default for CarConfiguration {
     fn default() -> Self {
         CarConfiguration {
             number: 0,
