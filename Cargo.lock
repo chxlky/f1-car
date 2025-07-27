@@ -286,6 +286,9 @@ dependencies = [
 [[package]]
 name = "telemetry"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "toml"

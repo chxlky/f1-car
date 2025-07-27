@@ -1,14 +1,24 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ControlMessage {
+    pub steering: i8, // -100 to 100 (left to right)
+    pub throttle: i8, // -100 to 100 (reverse to forward)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CarConfiguration {
+    pub number: u8,          // Car number
+    pub driver_name: String, // Driver's name
+    pub team_name: String,   // Team name
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl CarConfiguration {
+    fn default() -> Self {
+        CarConfiguration {
+            number: 0,
+            driver_name: "Unknown Driver".into(),
+            team_name: "Unknown Team".into(),
+        }
     }
 }
