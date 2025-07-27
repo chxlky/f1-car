@@ -1,0 +1,5 @@
+# Direnv
+.direnv
+
+# Rust
+**/target
