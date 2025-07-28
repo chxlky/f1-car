@@ -19,6 +19,9 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
     ),
   );
 
+  static DateTime? _lastPressed;
+  static const Duration _debounceTime = Duration(milliseconds: 1000);
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
@@ -52,6 +55,14 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                   backgroundColor: Colors.transparent,
                 ),
                 onPressed: () {
+                  final now = DateTime.now();
+                  if (_lastPressed != null && 
+                      now.difference(_lastPressed!) < _debounceTime) {
+                    _logger.w("Refresh button pressed too quickly - ignoring");
+                    return;
+                  }
+                  _lastPressed = now;
+
                   HapticFeedback.mediumImpact();
                   _logger.d(
                     "Refresh button clicked - starting F1 car discovery",
