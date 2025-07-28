@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:provider/provider.dart';
 import 'package:cockpit/widgets/app_bar.dart';
+import 'package:cockpit/services/f1_discovery_service.dart';
 
 void main() {
   runApp(const F1App());
@@ -12,11 +14,16 @@ class F1App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Cockpit',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(brightness: Brightness.dark),
-      home: const MainLayoutWrapper(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => F1DiscoveryService()),
+      ],
+      child: MaterialApp(
+        title: 'Cockpit',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(brightness: Brightness.dark),
+        home: const MainLayoutWrapper(),
+      ),
     );
   }
 }

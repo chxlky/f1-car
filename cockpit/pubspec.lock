@@ -78,6 +78,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
+  flutter_nsd:
+    dependency: "direct main"
+    description:
+      name: flutter_nsd
+      sha256: "06d9b77aa2aa1325c9137a2be8de0ce6bac80ce4e20f1dafb9542d854ff0fdc9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.0"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -139,6 +147,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.1"
+  lucide_icons_flutter:
+    dependency: "direct main"
+    description:
+      name: lucide_icons_flutter
+      sha256: cd48aec71f016f60f5c8ba65ac1d985e7526aa8c3633fbe5e078fc992c3273ac
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.7"
   matcher:
     dependency: transitive
     description:
@@ -163,6 +179,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   path:
     dependency: transitive
     description:
@@ -187,6 +211,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
+  provider:
+    dependency: "direct main"
+    description:
+      name: provider
+      sha256: "4abbd070a04e9ddc287673bf5a030c7ca8b685ff70218720abab8b092f53dd84"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.5"
   sky_engine:
     dependency: transitive
     description: flutter
