@@ -26,13 +26,20 @@
         };
 
         buildToolsVersions = "34.0.0";
-        androidComposition = pkgs.androidenv.composeAndroidPackages {
+        androidEnv = pkgs.androidenv.override {licenseAccepted = true;};
+        androidComposition = androidEnv.composeAndroidPackages {
+          cmdLineToolsVersion = "9.0";
+          toolsVersion = "26.1.1";
+          platformToolsVersion = "35.0.2";
           buildToolsVersions = [buildToolsVersions];
           platformVersions = ["23" "29" "30" "31" "32" "33" "34" "35" "28"];
           abiVersions = ["armeabi-v7a" "arm64-v8a"];
-          includeNDK = true;
-          ndkVersions = ["27.0.12077973" "26.3.11579264"];
           cmakeVersions = ["3.22.1"];
+          ndkVersions = ["27.0.12077973"];
+          includeNDK = true;
+          includeSources = false;
+          includeSystemImages = false;
+          includeEmulator = false;
         };
         androidSdk = androidComposition.androidsdk;
 
@@ -52,32 +59,7 @@
           rustc = rustToolchain;
         };
 
-        # Consolidated list of all development packages
-        devPackages = with pkgs; [
-          # Rust Development Tools
-          rustToolchain
-          pkg-config
-          openssl
-          probe-rs-tools
-          cargo-binutils
-          cargo-expand
-          llvm
-          gdb
-          elfutils
-          usbutils
-          gcc-arm-embedded
-          flip-link
-          nixpkgs-fmt
-          cmake
-          protoc-gen-prost
-          just
-
-          # Android Development Tools (for Flutter Android)
-          jdk17 # Java Development Kit
-          androidSdk # Android SDK, including build-tools, platforms, NDK
-
-          # Flutter and its native dependencies
-          flutter # The Flutter SDK
+        flutterBuildInputs = with pkgs; [
           xorg.libXcursor
           xorg.libXi
           xorg.libXrandr
@@ -85,37 +67,64 @@
           alsa-lib
           libxkbcommon
           zlib
+          jdk17
+          androidSdk
+          flutter
           libayatana-appindicator
           gtk3
           wayland
           openssl
           openssl.dev
+        ];
+
+        flutterNativeBuildInputs = with pkgs; [
           libsigcxx
-          stdenv.cc # C/C++ compiler for native compilation
+          stdenv.cc
           gnumake
           binutils
           ncurses5
           libGLU
           libGL
-          gcc-unwrapped # GCC compiler
-          clang # Clang compiler
-          ninja # Build system for C/C++
-          llvmPackages.libclang # Clang library for tooling
-          glibc_multi # GNU C Library (multi-arch)
-          lld # LLVM linker
-          mold # Modern linker
-
-          # Cross-compilation toolchains
-          rpi4bCrossPkgs.stdenv.cc # GCC for aarch64-unknown-linux-musl
-          stm32CrossPkgs.stdenv.cc # GCC for arm-none-eabi
+          pkg-config
+          gcc-unwrapped
+          clang
+          ninja
+          llvmPackages.libclang
+          glibc_multi
+          lld
         ];
 
+        devPackages = with pkgs;
+          [
+            rustToolchain
+            pkg-config
+            openssl
+            probe-rs-tools
+            cargo-binutils
+            cargo-expand
+            llvm
+            gdb
+            elfutils
+            usbutils
+            gcc-arm-embedded
+            flip-link
+            nixpkgs-fmt
+            cmake
+            protoc-gen-prost
+            just
+          ]
+          ++ flutterBuildInputs ++ flutterNativeBuildInputs;
       in {
         devShells.default = pkgs.mkShell {
-          packages = devPackages;
+          packages =
+            devPackages
+            ++ [
+              rpi4bCrossPkgs.stdenv.cc
+              stm32CrossPkgs.stdenv.cc
+            ];
 
           # Environment variables and shell hooks
-          enterShell = ''
+          shellHook = ''
             echo "Dev shell for f1-car ready with Flutter & Rust cross-compilation!"
             echo "Available Rust targets:"
             echo "  - aarch64-unknown-linux-musl (Raspberry Pi 4B)"
@@ -132,20 +141,15 @@
             # Android and Flutter configuration
             export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
             export ANDROID_SDK_ROOT="${androidSdk}/libexec/android-sdk"
-            # Dynamically find the NDK root (assumes one NDK version per ls -1)
-            export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/$(ls -1 $ANDROID_SDK_ROOT/ndk | head -n 1)"
-            export NDK_HOME="$ANDROID_NDK_ROOT" # For compatibility with tools that might use NDK_HOME
-            export FLUTTER_ROOT="${pkgs.flutter}" # Set FLUTTER_ROOT to the Nix-provided Flutter SDK
+            export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk-bundle"
+            export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk)"
+            export FLUTTER_ROOT="${pkgs.flutter}" 
 
             # Gradle options for Android builds
             export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/${buildToolsVersions}/aapt2"
 
-            # Ensure Flutter is in PATH (devenv usually handles this, but explicit is safer)
+            # Ensure Flutter is in PATH
             export PATH="$FLUTTER_ROOT/bin:$PATH"
-
-            # Run flutter doctor to verify setup (optional, but good for first time)
-            flutter doctor --android-licenses # Accept licenses if prompted
-            flutter doctor
           '';
         };
 
@@ -153,7 +157,7 @@
           radio = rustPlatform.buildRustPackage {
             pname = "f1-radio";
             version = "0.1.0";
-            src = ./.; # Assuming 'radio' is built from the root or this is a placeholder
+            src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
             cargoBuildFlags = ["--bin" "radio"];
             CARGO_BUILD_TARGET = "aarch64-unknown-linux-musl";
