@@ -114,6 +114,7 @@
             cmake
             protoc-gen-prost
             just
+            google-chrome
           ]
           ++ flutterBuildInputs ++ flutterNativeBuildInputs;
       in {
@@ -144,10 +145,13 @@
             export ANDROID_SDK_ROOT="${androidSdk}/libexec/android-sdk"
             export ANDROID_HOME="$ANDROID_SDK_ROOT"
             export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk-bundle"
-            export FLUTTER_ROOT="${pkgs.flutter}" 
+            export FLUTTER_ROOT="${pkgs.flutter}"
 
             # Gradle options for Android builds
             export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/${buildToolsVersions}/aapt2 -Dandroid.cmake.dir=$ANDROID_SDK_ROOT/cmake/${cmakeVersion}"
+
+            # Point Flutter to the Chrome executable
+            export CHROME_EXECUTABLE="${pkgs.google-chrome}/bin/google-chrome-stable"
 
             # Ensure Flutter is in PATH
             export PATH="$FLUTTER_ROOT/bin:$PATH"
