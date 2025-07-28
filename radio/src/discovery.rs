@@ -1,5 +1,5 @@
 use std::{
-    net::{Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
 
@@ -77,7 +77,7 @@ impl DiscoveryService {
 
         let service_name = format!("car-{}", config.number);
         let service_type = "_f1-car._udp.local.";
-        let host_name = format!("{local_ip}.local.");
+        let host_name = format!("{service_name}.local.");
 
         debug!("Service name: {service_name}");
         debug!("Service type: {service_type}");
@@ -98,7 +98,7 @@ impl DiscoveryService {
             service_type,
             &service_name,
             &host_name,
-            local_ip.to_string().as_str(),
+            IpAddr::from(local_ip),
             port,
             &properties[..],
         )
