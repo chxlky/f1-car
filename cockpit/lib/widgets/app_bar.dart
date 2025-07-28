@@ -56,16 +56,16 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 onPressed: () {
                   final now = DateTime.now();
-                  if (_lastPressed != null && 
+                  if (_lastPressed != null &&
                       now.difference(_lastPressed!) < _debounceTime) {
-                    _logger.w("Refresh button pressed too quickly - ignoring");
+                    _logger.w('Refresh button pressed too quickly - ignoring');
                     return;
                   }
                   _lastPressed = now;
 
                   HapticFeedback.mediumImpact();
                   _logger.d(
-                    "Refresh button clicked - starting F1 car discovery",
+                    'Refresh button clicked - starting F1 car discovery',
                   );
 
                   final discoveryService = context.read<F1DiscoveryService>();

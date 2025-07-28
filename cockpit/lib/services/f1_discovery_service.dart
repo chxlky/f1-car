@@ -6,6 +6,9 @@ import 'package:logger/logger.dart';
 import 'package:cockpit/models/f1car.dart';
 
 class F1DiscoveryService extends ChangeNotifier {
+  static const _serviceType = '_f1-car._udp.';
+  static const _discoveryTimeout = Duration(seconds: 10);
+
   static final _logger = Logger(
     printer: PrettyPrinter(
       methodCount: 0,
@@ -20,25 +23,23 @@ class F1DiscoveryService extends ChangeNotifier {
   FlutterNsd? _flutterNsd;
   StreamSubscription<NsdServiceInfo>? _subscription;
   Timer? _timeoutTimer;
-  List<F1Car> _discoveredCars = [];
+  final List<F1Car> _discoveredCars = [];
 
   bool get isDiscovering => _isDiscovering;
   List<F1Car> get discoveredCars => List.unmodifiable(_discoveredCars);
 
-  void startDiscovery() async {
-    _logger.i("Starting F1 car discovery...");
+  Future<void> startDiscovery() async {
+    _logger.i('Starting F1 car discovery...');
 
     if (_isDiscovering) {
       _logger.w(
-        "Discovery already in progress - stopping current discovery first",
+        'Discovery already in progress - stopping current discovery first',
       );
-      await _stopDiscovery();
+      await stopDiscovery();
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
-    await _ensureCleanState();
     _discoveredCars.clear();
-
     _isDiscovering = true;
     notifyListeners();
 
@@ -46,139 +47,36 @@ class F1DiscoveryService extends ChangeNotifier {
       await _performDiscovery();
     } catch (e) {
       _logger.e('Discovery error: $e');
-      await _ensureCleanState();
-    } finally {
-      _isDiscovering = false;
-      notifyListeners();
+      await stopDiscovery();
     }
   }
 
-  Future<void> _ensureCleanState() async {
+  Future<void> stopDiscovery() async {
+    if (!_isDiscovering) return;
+
+    _logger.i(
+      'Stopping discovery - found ${_discoveredCars.length} F1 car(s).',
+    );
+
+    _isDiscovering = false;
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
 
     try {
       await _subscription?.cancel();
     } catch (e) {
-      _logger.w('Error canceling subscription: $e');
+      _logger.w('Error cancelling subscription: $e');
     }
     _subscription = null;
 
     try {
       if (_flutterNsd != null) {
         await _flutterNsd!.stopDiscovery();
-        await Future.delayed(const Duration(milliseconds: 50));
       }
     } catch (e) {
-      _logger.w('Error stopping FlutterNsd: $e');
+      _logger.w('Error stopping FlutterNsd discovery: $e');
     }
     _flutterNsd = null;
-  }
-
-  Future<void> _performDiscovery() async {
-    try {
-      _flutterNsd = FlutterNsd();
-
-      _subscription = _flutterNsd!.stream.listen(
-        (NsdServiceInfo serviceInfo) {
-          _logger.i('Discovered F1 car service: ${serviceInfo.name}');
-
-          String? carNumberStr;
-          String? driverName;
-          String? teamName;
-          String? version;
-
-          if (serviceInfo.txt != null && serviceInfo.txt!.isNotEmpty) {
-            carNumberStr = _extractCarValue(serviceInfo.txt!, 'number');
-            driverName = _extractCarValue(serviceInfo.txt!, 'driver');
-            teamName = _extractCarValue(serviceInfo.txt!, 'team');
-            version = _extractCarValue(serviceInfo.txt!, 'version');
-          } else {
-            _logger.w('No TXT records found for service');
-          }
-
-          if (carNumberStr != null &&
-              driverName != null &&
-              teamName != null &&
-              version != null) {
-            final carNumber = int.tryParse(carNumberStr) ?? 0;
-
-            final f1Car = F1Car(
-              number: carNumber,
-              driverName: driverName,
-              teamName: teamName,
-              version: version,
-            );
-
-            final existingIndex = _discoveredCars.indexWhere(
-              (car) => car.number == f1Car.number,
-            );
-
-            if (existingIndex != -1) {
-              _discoveredCars[existingIndex] = f1Car;
-              _logger.d('Updated existing F1 car #${f1Car.number}');
-            } else {
-              _discoveredCars.add(f1Car);
-              _logger.i(
-                'Added F1 car #${f1Car.number} (${f1Car.driverName} - ${f1Car.teamName})',
-              );
-            }
-
-            notifyListeners();
-          } else {
-            _logger.w(
-              'Incomplete F1 car data - missing required fields (number: $carNumberStr, driver: $driverName, team: $teamName, version: $version)',
-            );
-          }
-        },
-        onError: (error) {
-          if (error is NsdError) {
-            _logger.e(
-              'Discovery NSD error - Code: ${error.errorCode}, Details: $error',
-            );
-            _stopDiscovery();
-          } else {
-            _logger.e('Discovery stream error: $error');
-          }
-        },
-      );
-
-      _timeoutTimer = Timer(const Duration(seconds: 10), () {
-        _logger.i(
-          'Discovery timeout - found ${_discoveredCars.length} F1 car(s)',
-        );
-        _stopDiscovery();
-      });
-
-      const serviceName = '_f1-car._udp.';
-      _logger.d('Starting discovery for service: $serviceName');
-
-      await _flutterNsd!.discoverServices(serviceName);
-
-      _logger.i('Discovery started successfully');
-    } catch (e) {
-      _logger.e('Failed to start discovery: $e');
-      rethrow;
-    }
-  }
-
-  String? _extractCarValue(Map<String, List<int>> txtRecords, String key) {
-    final value = txtRecords[key];
-    return value != null ? String.fromCharCodes(value) : null;
-  }
-
-  Future<void> stopDiscovery() async {
-    await _stopDiscovery();
-  }
-
-  Future<void> _stopDiscovery() async {
-    if (!_isDiscovering) return;
-
-    _logger.i("Discovery stopped - found ${_discoveredCars.length} F1 car(s)");
-
-    _isDiscovering = false;
-
-    await _ensureCleanState();
 
     notifyListeners();
   }
@@ -187,5 +85,105 @@ class F1DiscoveryService extends ChangeNotifier {
   void dispose() {
     stopDiscovery();
     super.dispose();
+  }
+
+  Future<void> _performDiscovery() async {
+    try {
+      _flutterNsd = FlutterNsd();
+      _subscription = _flutterNsd!.stream.listen(
+        _onServiceDiscovered,
+        onError: _onDiscoveryError,
+        onDone: () {
+          _logger.i('Discovery stream closed.');
+          stopDiscovery();
+        },
+      );
+
+      await _flutterNsd!.discoverServices(_serviceType);
+      _logger.i('Discovery started for service type: $_serviceType');
+
+      _timeoutTimer = Timer(_discoveryTimeout, () {
+        _logger.i(
+          'Discovery timeout reached after ${_discoveryTimeout.inSeconds} seconds. Found ${_discoveredCars.length} car(s).',
+        );
+        stopDiscovery();
+      });
+    } catch (e) {
+      _logger.e('Failed to start discovery: $e');
+      rethrow;
+    }
+  }
+
+  void _onServiceDiscovered(NsdServiceInfo serviceInfo) {
+    _logger.i('Discovered service: ${serviceInfo.name}');
+
+    final data = serviceInfo.txt;
+    if (data == null || data.isEmpty) {
+      _logger.w('Service has no records, skipping.');
+      return;
+    }
+
+    try {
+      final car = _createCarFromData(data);
+      _addOrUpdateCar(car);
+      notifyListeners();
+    } catch (e) {
+      _logger.w('Failed to create F1Car from records: $e');
+    }
+  }
+
+  F1Car _createCarFromData(Map<String, List<int>> data) {
+    final carNumberStr = _extractCarValue(data, 'number');
+    final driverName = _extractCarValue(data, 'driver');
+    final teamName = _extractCarValue(data, 'team');
+    final version = _extractCarValue(data, 'version');
+
+    final carNumber = int.tryParse(carNumberStr);
+    if (carNumber == null) {
+      throw Exception('Invalid car number: $carNumberStr');
+    }
+
+    return F1Car(
+      number: carNumber,
+      driverName: driverName,
+      teamName: teamName,
+      version: version,
+    );
+  }
+
+  void _addOrUpdateCar(F1Car car) {
+    final existingIndex = _discoveredCars.indexWhere(
+      (c) => c.number == car.number,
+    );
+
+    if (existingIndex != -1) {
+      _discoveredCars[existingIndex] = car;
+      _logger.d('Updated existing F1 car #${car.number}');
+    } else {
+      _discoveredCars.add(car);
+      _logger.i(
+        'Added new F1 car #${car.number} (${car.driverName} - ${car.teamName})',
+      );
+    }
+  }
+
+  void _onDiscoveryError(dynamic error) {
+    if (error is NsdError) {
+      _logger.e(
+        'Discovery NSD error - Code: ${error.errorCode}, Details: $error',
+      );
+    } else {
+      _logger.e('Discovery stream error: $error');
+    }
+    stopDiscovery();
+  }
+
+  String _extractCarValue(Map<String, List<int>> records, String key) {
+    final value = records[key];
+    if (value == null) {
+      throw Exception('Missing required record: $key');
+    }
+
+    return String.fromCharCodes(value);
   }
 }
