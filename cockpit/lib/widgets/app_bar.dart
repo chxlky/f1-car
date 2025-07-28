@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:logger/logger.dart';
 import 'package:cockpit/services/f1_discovery_service.dart';
 
 class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
   const F1AppBar({super.key});
+
+  static final _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 3,
+      lineLength: 80,
+      colors: true,
+      printEmojis: false,
+    ),
+  );
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -33,7 +45,7 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white),
+                icon: const Icon(LucideIcons.refreshCcw, color: Colors.white),
                 padding: const EdgeInsets.all(8),
                 splashRadius: 24,
                 style: IconButton.styleFrom(
@@ -41,7 +53,9 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 onPressed: () {
                   HapticFeedback.mediumImpact();
-                  print("Refresh clicked");
+                  _logger.d(
+                    "Refresh button clicked - starting F1 car discovery",
+                  );
 
                   final discoveryService = context.read<F1DiscoveryService>();
                   discoveryService.startDiscovery();

@@ -2,8 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_nsd/flutter_nsd.dart';
+import 'package:logger/logger.dart';
 
+// TODO: Fix error that happens when refresh is pressed twice
 class F1DiscoveryService extends ChangeNotifier {
+  static final _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 5,
+      lineLength: 80,
+      colors: true,
+      printEmojis: false,
+    ),
+  );
+
   bool _isDiscovering = false;
   FlutterNsd? _flutterNsd;
   StreamSubscription<NsdServiceInfo>? _subscription;
@@ -12,10 +24,10 @@ class F1DiscoveryService extends ChangeNotifier {
   bool get isDiscovering => _isDiscovering;
 
   void startDiscovery() async {
-    print("Starting F1 car discovery...");
+    _logger.i("Starting F1 car discovery...");
 
     if (_isDiscovering) {
-      print("Discovery already in progress");
+      _logger.w("Discovery already in progress");
       return;
     }
 
@@ -25,7 +37,7 @@ class F1DiscoveryService extends ChangeNotifier {
     try {
       await _performDiscovery();
     } catch (e) {
-      print('Discovery error: $e');
+      _logger.e('Discovery error: $e');
     } finally {
       _isDiscovering = false;
       notifyListeners();
@@ -36,10 +48,9 @@ class F1DiscoveryService extends ChangeNotifier {
     try {
       _flutterNsd = FlutterNsd();
 
-      // Listen to the stream for discovered services
       _subscription = _flutterNsd!.stream.listen(
         (NsdServiceInfo serviceInfo) {
-          print('Discovered F1 car service: ${serviceInfo.name}');
+          _logger.i('Discovered F1 car service: ${serviceInfo.name}');
           if (serviceInfo.hostname != null && serviceInfo.port != null) {
             String address;
             if (serviceInfo.hostname!.contains(':')) {
@@ -47,32 +58,29 @@ class F1DiscoveryService extends ChangeNotifier {
             } else {
               address = '${serviceInfo.hostname}:${serviceInfo.port}';
             }
-            print('Service address: $address');
+            _logger.d('Service address: $address');
           } else {
-            print('Service found but hostname/port not available');
+            _logger.w('Service found but hostname/port not available');
           }
         },
         onError: (error) {
-          print('Discovery error: $error');
+          _logger.e('Discovery stream error: $error');
         },
       );
 
-      // Set a timeout
       _timeoutTimer = Timer(const Duration(seconds: 10), () {
-        print('Discovery timeout - stopping');
+        _logger.w('Discovery timeout - stopping');
         stopDiscovery();
       });
 
-      // Start discovering the F1 car service
-      // Note: On Android, the service name must end with a dot
       const serviceName = '_f1-car._udp.';
-      print('Starting discovery for service: $serviceName');
+      _logger.d('Starting discovery for service: $serviceName');
 
       await _flutterNsd!.discoverServices(serviceName);
 
-      print('Discovery started successfully');
+      _logger.i('Discovery started successfully');
     } catch (e) {
-      print('Failed to start discovery: $e');
+      _logger.e('Failed to start discovery: $e');
       rethrow;
     }
   }
@@ -80,7 +88,7 @@ class F1DiscoveryService extends ChangeNotifier {
   void stopDiscovery() async {
     if (!_isDiscovering) return;
 
-    print("Stopping discovery...");
+    _logger.d("Stopping discovery...");
 
     _isDiscovering = false;
     _timeoutTimer?.cancel();
@@ -88,9 +96,9 @@ class F1DiscoveryService extends ChangeNotifier {
     try {
       await _subscription?.cancel();
       await _flutterNsd?.stopDiscovery();
-      print("Discovery stopped");
+      _logger.i("Discovery stopped");
     } catch (e) {
-      print('Error stopping discovery: $e');
+      _logger.e('Error stopping discovery: $e');
     }
 
     _subscription = null;

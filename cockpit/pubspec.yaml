@@ -38,6 +38,7 @@ dependencies:
   lucide_icons_flutter: ^3.0.7
   provider: ^6.1.2
   flutter_nsd: ^1.6.0
+  logger: ^2.6.1
 
 dev_dependencies:
   flutter_test:
