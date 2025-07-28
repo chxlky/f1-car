@@ -26,6 +26,8 @@
         };
 
         buildToolsVersions = "34.0.0";
+        cmakeVersion = "3.22.1";
+        ndkVersion = "27.0.12077973";
         androidEnv = pkgs.androidenv.override {licenseAccepted = true;};
         androidComposition = androidEnv.composeAndroidPackages {
           cmdLineToolsVersion = "9.0";
@@ -34,8 +36,8 @@
           buildToolsVersions = [buildToolsVersions];
           platformVersions = ["23" "29" "30" "31" "32" "33" "34" "35" "28"];
           abiVersions = ["armeabi-v7a" "arm64-v8a"];
-          cmakeVersions = ["3.22.1"];
-          ndkVersions = ["27.0.12077973"];
+          cmakeVersions = [cmakeVersion];
+          ndkVersions = [ndkVersion];
           includeNDK = true;
           includeSources = false;
           includeSystemImages = false;
@@ -139,14 +141,13 @@
             export NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1
 
             # Android and Flutter configuration
-            export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
             export ANDROID_SDK_ROOT="${androidSdk}/libexec/android-sdk"
+            export ANDROID_HOME="$ANDROID_SDK_ROOT"
             export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk-bundle"
-            export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk)"
             export FLUTTER_ROOT="${pkgs.flutter}" 
 
             # Gradle options for Android builds
-            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/${buildToolsVersions}/aapt2"
+            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/${buildToolsVersions}/aapt2 -Dandroid.cmake.dir=$ANDROID_SDK_ROOT/cmake/${cmakeVersion}"
 
             # Ensure Flutter is in PATH
             export PATH="$FLUTTER_ROOT/bin:$PATH"
