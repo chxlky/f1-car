@@ -174,9 +174,9 @@ class _CarCardState extends State<CarCard> with SingleTickerProviderStateMixin {
     if (widget.isSelected && widget.isConnecting) {
       buttonText = 'Connecting...';
     } else if (widget.isSelected) {
-      buttonText = '🔗 Connected';
+      buttonText = 'Connected';
     } else {
-      buttonText = '🚀 Connect';
+      buttonText = 'Connect';
     }
 
     return GestureDetector(

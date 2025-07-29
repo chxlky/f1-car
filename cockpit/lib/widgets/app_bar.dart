@@ -2,6 +2,7 @@ import 'package:cockpit/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -63,6 +64,13 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                   if (_lastPressed != null &&
                       now.difference(_lastPressed!) < _debounceTime) {
                     _logger.w('Refresh button pressed too quickly - ignoring');
+                    Fluttertoast.showToast(
+                      msg: "Please wait before refreshing again",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                     return;
                   }
                   _lastPressed = now;

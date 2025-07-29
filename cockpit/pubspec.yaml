@@ -39,6 +39,7 @@ dependencies:
   provider: ^6.1.2
   flutter_nsd: ^1.6.0
   logger: ^2.6.1
+  fluttertoast: ^8.2.12
 
 dev_dependencies:
   flutter_test:
