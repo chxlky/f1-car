@@ -113,7 +113,7 @@ class _F1HomePageState extends State<F1HomePage> {
         crossAxisCount: 1,
         mainAxisSpacing: 24,
         crossAxisSpacing: 24,
-        childAspectRatio: 1.7,
+        childAspectRatio: 2,
       ),
       itemCount: discoveryService.discoveredCars.length,
       itemBuilder: (context, index) {

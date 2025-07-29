@@ -91,8 +91,7 @@ class _CarCardState extends State<CarCard> with SingleTickerProviderStateMixin {
     return GestureDetector(
       onTap: () {},
       child: Container(
-        height: 200,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(8),
@@ -103,61 +102,63 @@ class _CarCardState extends State<CarCard> with SingleTickerProviderStateMixin {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          firstName,
-                          style: textTheme.headlineMedium?.copyWith(
-                            fontSize: 40,
-                            fontStyle: FontStyle.italic,
-                            height: 1.0,
-                            color: AppColors.white,
-                          ),
-                        ),
-                        SingleChildScrollView(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          child: Text(
-                            lastName.toUpperCase(),
-                            style: textTheme.displayLarge?.copyWith(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            firstName,
+                            style: textTheme.headlineMedium?.copyWith(
+                              fontSize: 40,
+                              fontStyle: FontStyle.italic,
+                              height: 1.0,
                               color: AppColors.white,
                             ),
                           ),
-                        ),
-                      ],
+                          SingleChildScrollView(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            child: Text(
+                              lastName.toUpperCase(),
+                              style: textTheme.displayLarge?.copyWith(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  width: 80,
-                  child: Text(
-                    '${widget.car.number}',
-                    style: textTheme.headlineSmall,
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      '${widget.car.number}',
+                      style: textTheme.headlineSmall,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.visible,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             _buildConnectButton(context),
           ],
@@ -182,7 +183,7 @@ class _CarCardState extends State<CarCard> with SingleTickerProviderStateMixin {
     return GestureDetector(
       onTap: isDisabled ? null : () => widget.onConnect(widget.car),
       child: Container(
-        margin: const EdgeInsets.only(top: 24),
+        margin: const EdgeInsets.only(top: 8),
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
