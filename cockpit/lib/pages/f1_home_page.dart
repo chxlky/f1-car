@@ -138,8 +138,6 @@ class _F1HomePageState extends State<F1HomePage> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    final headerHeight = 72 + statusBarHeight;
 
     return Consumer<F1DiscoveryService>(
       builder: (context, discoveryService, child) {
@@ -147,9 +145,9 @@ class _F1HomePageState extends State<F1HomePage> {
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          clipBehavior: Clip.none,
+          clipBehavior: Clip.hardEdge,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(24.0, headerHeight + 24.0, 24.0, 24.0),
+            padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -158,8 +156,10 @@ class _F1HomePageState extends State<F1HomePage> {
                   textAlign: TextAlign.center,
                   style: textTheme.displayLarge,
                 ),
-                const SizedBox(height: 24),
-                _buildCarList(discoveryService),
+                Transform.translate(
+                  offset: const Offset(0, -50),
+                  child: _buildCarList(discoveryService),
+                ),
               ],
             ),
           ),

@@ -29,8 +29,10 @@ class F1App extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.f1Dark,
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,
-            elevation: 5,
-            iconTheme: IconThemeData(color: AppColors.white)
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            iconTheme: IconThemeData(color: AppColors.white),
           ),
           textTheme: AppTypography.buildTextTheme(ThemeData.dark().textTheme),
           useMaterial3: true,
@@ -47,9 +49,11 @@ class MainLayoutWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
+    const appBar = F1AppBar();
 
     return Scaffold(
-      appBar: const F1AppBar(),
+      extendBodyBehindAppBar: true,
+      appBar: appBar,
       body: SizedBox(
         height: mediaQuery.size.height,
         width: mediaQuery.size.width,
@@ -64,7 +68,13 @@ class MainLayoutWrapper extends StatelessWidget {
                 ),
               ),
             ),
-            const F1HomePage(),
+            Positioned(
+              top: appBar.preferredSize.height + mediaQuery.padding.top,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ClipRect(child: const F1HomePage()),
+            ),
           ],
         ),
       ),
