@@ -44,6 +44,7 @@ class F1DiscoveryService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // await _loadMockCars();
       await _performDiscovery();
     } catch (e) {
       _logger.e('Discovery error: $e');
@@ -85,6 +86,56 @@ class F1DiscoveryService extends ChangeNotifier {
   void dispose() {
     stopDiscovery();
     super.dispose();
+  }
+
+  // ignore: unused_element
+  Future<void> _loadMockCars() async {
+    _logger.i('Loading mock F1 cars...');
+
+    // Simulate some discovery delay
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final mockCars = [
+      F1Car(
+        number: 1,
+        driverName: 'Max Verstappen',
+        teamName: 'Oracle Red Bull Racing',
+        version: '1.0.0',
+      ),
+      F1Car(
+        number: 16,
+        driverName: 'Charles Leclerc',
+        teamName: 'Scuderia Ferrari HP',
+        version: '1.0.2',
+      ),
+      F1Car(
+        number: 55,
+        driverName: 'Carlos Sainz',
+        teamName: 'Atlassian Williams Racing',
+        version: '1.0.2',
+      ),
+      F1Car(
+        number: 27,
+        driverName: 'Nico Hülkenberg',
+        teamName: 'Stake F1 Team Kick Sauber',
+        version: '1.0.2',
+      ),
+    ];
+
+    for (final car in mockCars) {
+      _discoveredCars.add(car);
+      _logger.i(
+        'Added mock F1 car #${car.number} (${car.driverName} - ${car.teamName})',
+      );
+
+      await Future.delayed(const Duration(milliseconds: 200));
+      notifyListeners();
+    }
+
+    _logger.i(
+      'Mock discovery completed. Found ${_discoveredCars.length} cars.',
+    );
+    await stopDiscovery();
   }
 
   Future<void> _performDiscovery() async {

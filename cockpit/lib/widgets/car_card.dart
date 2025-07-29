@@ -29,7 +29,7 @@ class _CarCardState extends State<CarCard> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 5000),
       vsync: this,
     );
     _scrollController = ScrollController();
