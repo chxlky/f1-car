@@ -1,3 +1,4 @@
+import 'package:cockpit/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -48,7 +49,10 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(LucideIcons.refreshCcw, color: Colors.white),
+                icon: const Icon(
+                  LucideIcons.refreshCcw,
+                  color: AppColors.white,
+                ),
                 padding: const EdgeInsets.all(8),
                 splashRadius: 24,
                 style: IconButton.styleFrom(

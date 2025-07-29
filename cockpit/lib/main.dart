@@ -1,3 +1,7 @@
+import 'package:cockpit/pages/f1_home_page.dart';
+import 'package:cockpit/utils/app_colors.dart';
+import 'package:cockpit/utils/app_typography.dart';
+import 'package:cockpit/utils/assets_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +15,6 @@ void main() {
 class F1App extends StatelessWidget {
   const F1App({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -21,7 +24,17 @@ class F1App extends StatelessWidget {
       child: MaterialApp(
         title: 'Cockpit',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(brightness: Brightness.dark),
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: AppColors.f1Dark,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.transparent,
+            elevation: 5,
+            iconTheme: IconThemeData(color: AppColors.white)
+          ),
+          textTheme: AppTypography.buildTextTheme(ThemeData.dark().textTheme),
+          useMaterial3: true,
+        ),
         home: const MainLayoutWrapper(),
       ),
     );
@@ -46,11 +59,12 @@ class MainLayoutWrapper extends StatelessWidget {
               child: Opacity(
                 opacity: 0.2,
                 child: SvgPicture.asset(
-                  'assets/svg/f1-lines.svg',
+                  AssetsPath.f1LinesSvg,
                   fit: BoxFit.cover,
                 ),
               ),
             ),
+            const F1HomePage(),
           ],
         ),
       ),
