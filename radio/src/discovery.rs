@@ -1,12 +1,10 @@
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
+use local_ip_address::local_ip;
 use log::{debug, error, info, warn};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
-use tokio::{net::UdpSocket, sync::Mutex};
+use tokio::sync::Mutex;
 
 use crate::config::ConfigManager;
 
@@ -27,34 +25,6 @@ impl DiscoveryService {
         })
     }
 
-    async fn get_local_ip() -> Result<Ipv4Addr> {
-        let socket = UdpSocket::bind("0.0.0.0:0")
-            .await
-            .context("Failed to bind UDP socket")?;
-
-        socket
-            .connect("8.8.8.8:80")
-            .await
-            .context("Failed to connect to public address")?;
-
-        match socket.local_addr() {
-            Ok(addr) => {
-                if let SocketAddr::V4(addr_v4) = addr {
-                    let ip = *addr_v4.ip();
-                    debug!("Local IP address: {ip}");
-
-                    Ok(ip)
-                } else {
-                    Err(anyhow!("Local address is not IPv4"))
-                }
-            }
-            Err(_) => {
-                warn!("Failed to get local address");
-                Err(anyhow!("Failed to get local address"))
-            }
-        }
-    }
-
     pub async fn start_advertising(&mut self, port: u16) -> Result<()> {
         let config = {
             let config_manager = self.config_manager.lock().await;
@@ -70,8 +40,7 @@ impl DiscoveryService {
             self.service_info = None;
         }
 
-        let local_ip = Self::get_local_ip()
-            .await
+        let local_ip = local_ip()
             .context("Failed to get local IP address")?;
         info!("Using Local IP: {local_ip}");
 
@@ -98,7 +67,7 @@ impl DiscoveryService {
             service_type,
             &service_name,
             &host_name,
-            IpAddr::from(local_ip),
+            local_ip,
             port,
             &properties[..],
         )
