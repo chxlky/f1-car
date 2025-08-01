@@ -191,7 +191,10 @@ class F1DiscoveryService extends ChangeNotifier {
     }
   }
 
-  F1Car _createCarFromData(Map<String, List<int>> data, NsdServiceInfo serviceInfo) {
+  F1Car _createCarFromData(
+    Map<String, List<int>> data,
+    NsdServiceInfo serviceInfo,
+  ) {
     final carNumberStr = _extractCarValue(data, 'number');
     final driverName = _extractCarValue(data, 'driver');
     final teamName = _extractCarValue(data, 'team');

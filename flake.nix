@@ -94,6 +94,7 @@
           llvmPackages.libclang
           glibc_multi
           lld
+          rustup
         ];
 
         devPackages = with pkgs;
@@ -108,23 +109,24 @@
             gdb
             elfutils
             usbutils
-            gcc-arm-embedded
+            # gcc-arm-embedded
             flip-link
             nixpkgs-fmt
             cmake
             protoc-gen-prost
             just
             google-chrome
+            flutter_rust_bridge_codegen
           ]
           ++ flutterBuildInputs ++ flutterNativeBuildInputs;
       in {
         devShells.default = pkgs.mkShell {
           packages =
-            devPackages
-            ++ [
-              rpi4bCrossPkgs.stdenv.cc
-              stm32CrossPkgs.stdenv.cc
-            ];
+            devPackages;
+            # ++ [
+            #   rpi4bCrossPkgs.stdenv.cc
+            #   stm32CrossPkgs.stdenv.cc
+            # ];
 
           # Environment variables and shell hooks
           shellHook = ''
@@ -135,7 +137,10 @@
 
             # Set linker environment variables for manual `cargo build --target`
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=${rpi4bCrossPkgs.stdenv.cc}/bin/aarch64-unknown-linux-musl-gcc
+            export CC_aarch64_unknown_linux_musl=${rpi4bCrossPkgs.stdenv.cc}/bin/aarch64-unknown-linux-musl-gcc
+
             export CARGO_TARGET_THUMBV7EM_NONE_EABIHF_LINKER=${stm32CrossPkgs.stdenv.cc}/bin/arm-none-eabi-gcc
+            export CC_thumbv7em_none_eabihf=${stm32CrossPkgs.stdenv.cc}/bin/arm-none-eabi-gcc
 
             # Allow cross-compilation for pkg-config and unsupported systems
             export PKG_CONFIG_ALLOW_CROSS=1
@@ -155,6 +160,13 @@
 
             # Ensure Flutter is in PATH
             export PATH="$FLUTTER_ROOT/bin:$PATH"
+
+            # Add user's local cargo binaries to PATH (for tools installed with 'cargo install')
+            export PATH="$HOME/.cargo/bin:$PATH"
+
+            # Set library path for Flutter Rust Bridge
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath devPackages}:${pkgs.ncurses5}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.gcc}/lib"
+            export CARGO_MANIFEST_DIR=$(pwd)
           '';
         };
 
