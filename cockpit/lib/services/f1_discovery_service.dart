@@ -101,24 +101,32 @@ class F1DiscoveryService extends ChangeNotifier {
         driverName: 'Max Verstappen',
         teamName: 'Oracle Red Bull Racing',
         version: '1.0.0',
+        ipAddress: '192.168.1.100',
+        port: 8080,
       ),
       F1Car(
         number: 16,
         driverName: 'Charles Leclerc',
         teamName: 'Scuderia Ferrari HP',
         version: '1.0.2',
+        ipAddress: '192.168.1.101',
+        port: 8080,
       ),
       F1Car(
         number: 55,
         driverName: 'Carlos Sainz',
         teamName: 'Atlassian Williams Racing',
         version: '1.0.2',
+        ipAddress: '192.168.1.102',
+        port: 8080,
       ),
       F1Car(
         number: 27,
         driverName: 'Nico Hülkenberg',
         teamName: 'Stake F1 Team Kick Sauber',
         version: '1.0.2',
+        ipAddress: '192.168.1.103',
+        port: 8080,
       ),
     ];
 
@@ -175,7 +183,7 @@ class F1DiscoveryService extends ChangeNotifier {
     }
 
     try {
-      final car = _createCarFromData(data);
+      final car = _createCarFromData(data, serviceInfo);
       _addOrUpdateCar(car);
       notifyListeners();
     } catch (e) {
@@ -183,7 +191,7 @@ class F1DiscoveryService extends ChangeNotifier {
     }
   }
 
-  F1Car _createCarFromData(Map<String, List<int>> data) {
+  F1Car _createCarFromData(Map<String, List<int>> data, NsdServiceInfo serviceInfo) {
     final carNumberStr = _extractCarValue(data, 'number');
     final driverName = _extractCarValue(data, 'driver');
     final teamName = _extractCarValue(data, 'team');
@@ -199,6 +207,8 @@ class F1DiscoveryService extends ChangeNotifier {
       driverName: driverName,
       teamName: teamName,
       version: version,
+      ipAddress: serviceInfo.hostname, // This might resolve to IP later
+      port: serviceInfo.port,
     );
   }
 

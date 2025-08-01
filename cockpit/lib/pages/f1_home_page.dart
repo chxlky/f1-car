@@ -1,8 +1,8 @@
 import 'package:cockpit/models/f1car.dart';
+import 'package:cockpit/pages/radio_communication_page.dart';
 import 'package:cockpit/services/f1_discovery_service.dart';
 import 'package:cockpit/widgets/car_card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
@@ -43,24 +43,29 @@ class _F1HomePageState extends State<F1HomePage> {
     });
   }
 
-  void _connectToCar(F1Car car) {
+  void _connectToCar(F1Car car) async {
     setState(() {
       _connectionStatus = ConnectionStatus.connecting;
       _selectedCar = car;
     });
 
-    // TODO: Implement actual connection logic here
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _connectionStatus = ConnectionStatus.connected;
-        });
+    _logger.i(
+      'Attempting to connect to car ${car.number} at ${car.ipAddress}:${car.port}',
+    );
 
-        HapticFeedback.mediumImpact();
+    if (mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => RadioCommunicationPage(car: car),
+        ),
+      );
 
-        _logger.i('Connected to car ${car.number}');
-      }
-    });
+      // Reset connection status when returning from radio page
+      setState(() {
+        _connectionStatus = ConnectionStatus.disconnected;
+        _selectedCar = null;
+      });
+    }
   }
 
   Widget _buildCarList(F1DiscoveryService discoveryService) {
