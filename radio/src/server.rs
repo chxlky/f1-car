@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::{io::ErrorKind, net::SocketAddr, sync::Arc, time::Duration};
 use telemetry::{CarConfiguration, ControlMessage};
 use tokio::{
@@ -38,7 +38,7 @@ pub struct RadioServer {
     control_tx: broadcast::Sender<ControlMessage>,
     config_manager: Arc<Mutex<ConfigManager>>,
     discovery_service: Arc<Mutex<DiscoveryService>>,
-    connected_clients: Arc<Mutex<Vec<SocketAddr>>>,
+    connected_client: Arc<Mutex<Option<SocketAddr>>>,
 }
 
 impl RadioServer {
@@ -47,13 +47,13 @@ impl RadioServer {
         let config_manager = Arc::new(Mutex::new(ConfigManager::new().await?));
         let discovery_service =
             Arc::new(Mutex::new(DiscoveryService::new(config_manager.clone())?));
-        let connected_clients = Arc::new(Mutex::new(Vec::new()));
+        let connected_client = Arc::new(Mutex::new(None));
 
         Ok(Self {
             control_tx,
             config_manager,
             discovery_service,
-            connected_clients,
+            connected_client,
         })
     }
 
@@ -83,9 +83,10 @@ impl RadioServer {
         match message {
             ClientMessage::Control(control_msg) => {
                 // Forward control message to UART/STM32
-                if let Err(e) = self.control_tx.send(control_msg) {
+                /* if let Err(e) = self.control_tx.send(control_msg) {
                     error!("Failed to send control message: {e}");
-                }
+                } */
+                debug!("Received control message: {control_msg:?}");
             }
             ClientMessage::ConfigUpdate { config } => {
                 info!(
@@ -151,16 +152,29 @@ impl RadioServer {
             }
             Ok(Err(e)) => {
                 error!("Failed to send to {client_addr}: {e}");
-                let mut clients = self.connected_clients.lock().await;
-                clients.retain(|&addr| addr != client_addr);
+                info!("Client disconnected (send failed) : {client_addr}");
+
+                let mut client = self.connected_client.lock().await;
+                *client = None;
             }
             Err(_) => {
                 warn!("Send to {client_addr} timed out");
-                let mut clients = self.connected_clients.lock().await;
-                clients.retain(|&addr| addr != client_addr);
+                info!("Client disconnected (timeout): {client_addr}");
+
+                let mut client = self.connected_client.lock().await;
+                *client = None;
             }
         }
         Ok(())
+    }
+
+    async fn send_initial_config(&self, socket: &UdpSocket, client_addr: SocketAddr) {
+        let config = self.get_car_config().await;
+        let welcome_msg = ServerMessage::Config { config };
+
+        if let Err(e) = self.send_to_client(socket, &welcome_msg, client_addr).await {
+            error!("Failed to send welcome message to {client_addr}: {e}");
+        }
     }
 
     pub async fn run(&self) -> Result<()> {
@@ -190,21 +204,28 @@ impl RadioServer {
         loop {
             match socket.recv_from(&mut buffer).await {
                 Ok((len, client_addr)) => {
+                    let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
+                    debug!("UDP message received from {client_addr}: {data_str}");
+
                     // Add client to connected list if not already present
                     {
-                        let mut clients = self.connected_clients.lock().await;
-                        if !clients.contains(&client_addr) {
-                            clients.push(client_addr);
-                            info!("New UDP client connected: {client_addr}");
+                        let mut client = self.connected_client.lock().await;
+                        match *client {
+                            None => {
+                                *client = Some(client_addr);
+                                info!("Client connected: {client_addr}");
 
-                            // Send initial configuration to new client
-                            let car_config = self.get_car_config().await;
-                            let welcome_msg = ServerMessage::Config { config: car_config };
-                            if let Err(e) = self
-                                .send_to_client(&socket, &welcome_msg, client_addr)
-                                .await
-                            {
-                                error!("Failed to send welcome message to {client_addr}: {e}");
+                                self.send_initial_config(&socket, client_addr).await;
+                            }
+                            Some(existing_addr) => {
+                                if existing_addr != client_addr {
+                                    info!(
+                                        "Previous client {existing_addr} replaced by new client {client_addr}"
+                                    );
+                                    *client = Some(client_addr);
+
+                                    self.send_initial_config(&socket, client_addr).await;
+                                }
                             }
                         }
                     }
