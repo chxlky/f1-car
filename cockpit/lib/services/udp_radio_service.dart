@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cockpit/models/f1car.dart';
 import 'package:cockpit/models/car_configuration.dart';
+import 'package:cockpit/src/rust/api/models.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 

@@ -1,7 +1,7 @@
-import 'package:cockpit/models/f1car.dart';
 import 'package:cockpit/services/udp_radio_service.dart';
 import 'package:cockpit/models/radio_connection_state.dart';
 import 'package:cockpit/models/server_message.dart';
+import 'package:cockpit/src/rust/api/models.dart';
 import 'package:cockpit/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 

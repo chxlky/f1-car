@@ -3,7 +3,8 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'api/simple.dart';
+import 'api/discovery.dart';
+import 'api/models.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -54,9 +55,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
       RustLibWire.fromExternalLibrary;
 
   @override
-  Future<void> executeRustInitializers() async {
-    await api.crateApiSimpleInitApp();
-  }
+  Future<void> executeRustInitializers() async {}
 
   @override
   ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
@@ -66,7 +65,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1774672074;
+  int get rustContentHash => 1281884717;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -77,11 +76,41 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  String crateApiSimpleGreet({required String name});
+  List<F1Car> crateApiDiscoveryF1DiscoveryServiceGetDiscoveredCars({
+    required F1DiscoveryService that,
+  });
 
-  Future<String> crateApiSimpleHelloWorld();
+  bool crateApiDiscoveryF1DiscoveryServiceIsDiscovering({
+    required F1DiscoveryService that,
+  });
 
-  Future<void> crateApiSimpleInitApp();
+  Stream<DiscoveryEvent> crateApiDiscoveryF1DiscoveryServiceLoadMockCars({
+    required F1DiscoveryService that,
+  });
+
+  F1DiscoveryService crateApiDiscoveryF1DiscoveryServiceNew();
+
+  Stream<DiscoveryEvent> crateApiDiscoveryF1DiscoveryServiceStartDiscovery({
+    required F1DiscoveryService that,
+  });
+
+  Future<F1Car> crateApiModelsF1CarNew({
+    required int number,
+    required String driverName,
+    required String teamName,
+    required String version,
+    String? ipAddress,
+    int? port,
+  });
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_F1DiscoveryService;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_F1DiscoveryService;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_F1DiscoveryServicePtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -93,81 +122,274 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  String crateApiSimpleGreet({required String name}) {
+  List<F1Car> crateApiDiscoveryF1DiscoveryServiceGetDiscoveredCars({
+    required F1DiscoveryService that,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(name, serializer);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+            that,
+            serializer,
+          );
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_list_f_1_car,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleGreetConstMeta,
-        argValues: [name],
+        constMeta:
+            kCrateApiDiscoveryF1DiscoveryServiceGetDiscoveredCarsConstMeta,
+        argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleGreetConstMeta =>
-      const TaskConstMeta(debugName: "greet", argNames: ["name"]);
+  TaskConstMeta
+  get kCrateApiDiscoveryF1DiscoveryServiceGetDiscoveredCarsConstMeta =>
+      const TaskConstMeta(
+        debugName: "F1DiscoveryService_get_discovered_cars",
+        argNames: ["that"],
+      );
 
   @override
-  Future<String> crateApiSimpleHelloWorld() {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
+  bool crateApiDiscoveryF1DiscoveryServiceIsDiscovering({
+    required F1DiscoveryService that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+            that,
             serializer,
-            funcId: 2,
-            port: port_,
           );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_bool,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleHelloWorldConstMeta,
+        constMeta: kCrateApiDiscoveryF1DiscoveryServiceIsDiscoveringConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiDiscoveryF1DiscoveryServiceIsDiscoveringConstMeta =>
+      const TaskConstMeta(
+        debugName: "F1DiscoveryService_is_discovering",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<DiscoveryEvent> crateApiDiscoveryF1DiscoveryServiceLoadMockCars({
+    required F1DiscoveryService that,
+  }) {
+    final sink = RustStreamSink<DiscoveryEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_discovery_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 3,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiDiscoveryF1DiscoveryServiceLoadMockCarsConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiDiscoveryF1DiscoveryServiceLoadMockCarsConstMeta =>
+      const TaskConstMeta(
+        debugName: "F1DiscoveryService_load_mock_cars",
+        argNames: ["that", "sink"],
+      );
+
+  @override
+  F1DiscoveryService crateApiDiscoveryF1DiscoveryServiceNew() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDiscoveryF1DiscoveryServiceNewConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleHelloWorldConstMeta =>
-      const TaskConstMeta(debugName: "hello_world", argNames: []);
+  TaskConstMeta get kCrateApiDiscoveryF1DiscoveryServiceNewConstMeta =>
+      const TaskConstMeta(debugName: "F1DiscoveryService_new", argNames: []);
 
   @override
-  Future<void> crateApiSimpleInitApp() {
+  Stream<DiscoveryEvent> crateApiDiscoveryF1DiscoveryServiceStartDiscovery({
+    required F1DiscoveryService that,
+  }) {
+    final sink = RustStreamSink<DiscoveryEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_discovery_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 5,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta:
+              kCrateApiDiscoveryF1DiscoveryServiceStartDiscoveryConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta
+  get kCrateApiDiscoveryF1DiscoveryServiceStartDiscoveryConstMeta =>
+      const TaskConstMeta(
+        debugName: "F1DiscoveryService_start_discovery",
+        argNames: ["that", "sink"],
+      );
+
+  @override
+  Future<F1Car> crateApiModelsF1CarNew({
+    required int number,
+    required String driverName,
+    required String teamName,
+    required String version,
+    String? ipAddress,
+    int? port,
+  }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_32(number, serializer);
+          sse_encode_String(driverName, serializer);
+          sse_encode_String(teamName, serializer);
+          sse_encode_String(version, serializer);
+          sse_encode_opt_String(ipAddress, serializer);
+          sse_encode_opt_box_autoadd_i_32(port, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 6,
             port: port_,
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
+          decodeSuccessData: sse_decode_f_1_car,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleInitAppConstMeta,
-        argValues: [],
+        constMeta: kCrateApiModelsF1CarNewConstMeta,
+        argValues: [number, driverName, teamName, version, ipAddress, port],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
-      const TaskConstMeta(debugName: "init_app", argNames: []);
+  TaskConstMeta get kCrateApiModelsF1CarNewConstMeta => const TaskConstMeta(
+    debugName: "f_1_car_new",
+    argNames: [
+      "number",
+      "driverName",
+      "teamName",
+      "version",
+      "ipAddress",
+      "port",
+    ],
+  );
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_F1DiscoveryService => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_F1DiscoveryService => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  F1DiscoveryService
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  F1DiscoveryService
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  F1DiscoveryService
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<DiscoveryEvent> dco_decode_StreamSink_discovery_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -176,9 +398,90 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  F1Car dco_decode_box_autoadd_f_1_car(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_f_1_car(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  DiscoveryEvent dco_decode_discovery_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return DiscoveryEvent_CarDiscovered(
+          dco_decode_box_autoadd_f_1_car(raw[1]),
+        );
+      case 1:
+        return DiscoveryEvent_CarUpdated(
+          dco_decode_box_autoadd_f_1_car(raw[1]),
+        );
+      case 2:
+        return DiscoveryEvent_DiscoveryStarted();
+      case 3:
+        return DiscoveryEvent_DiscoveryStopped();
+      case 4:
+        return DiscoveryEvent_Error(dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  F1Car dco_decode_f_1_car(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return F1Car(
+      number: dco_decode_i_32(arr[0]),
+      driverName: dco_decode_String(arr[1]),
+      teamName: dco_decode_String(arr[2]),
+      version: dco_decode_String(arr[3]),
+      ipAddress: dco_decode_opt_String(arr[4]),
+      port: dco_decode_opt_box_autoadd_i_32(arr[5]),
+    );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  List<F1Car> dco_decode_list_f_1_car(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_f_1_car).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
   }
 
   @protected
@@ -194,6 +497,63 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  F1DiscoveryService
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  F1DiscoveryService
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  F1DiscoveryService
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return F1DiscoveryServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustStreamSink<DiscoveryEvent> sse_decode_StreamSink_discovery_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -201,10 +561,111 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  F1Car sse_decode_box_autoadd_f_1_car(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_1_car(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  DiscoveryEvent sse_decode_discovery_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_box_autoadd_f_1_car(deserializer);
+        return DiscoveryEvent_CarDiscovered(var_field0);
+      case 1:
+        var var_field0 = sse_decode_box_autoadd_f_1_car(deserializer);
+        return DiscoveryEvent_CarUpdated(var_field0);
+      case 2:
+        return DiscoveryEvent_DiscoveryStarted();
+      case 3:
+        return DiscoveryEvent_DiscoveryStopped();
+      case 4:
+        var var_field0 = sse_decode_String(deserializer);
+        return DiscoveryEvent_Error(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  F1Car sse_decode_f_1_car(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_number = sse_decode_i_32(deserializer);
+    var var_driverName = sse_decode_String(deserializer);
+    var var_teamName = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_ipAddress = sse_decode_opt_String(deserializer);
+    var var_port = sse_decode_opt_box_autoadd_i_32(deserializer);
+    return F1Car(
+      number: var_number,
+      driverName: var_driverName,
+      teamName: var_teamName,
+      version: var_version,
+      ipAddress: var_ipAddress,
+      port: var_port,
+    );
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  List<F1Car> sse_decode_list_f_1_car(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <F1Car>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_f_1_car(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -219,21 +680,147 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    F1DiscoveryService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as F1DiscoveryServiceImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    F1DiscoveryService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as F1DiscoveryServiceImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    F1DiscoveryService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as F1DiscoveryServiceImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_discovery_event_Sse(
+    RustStreamSink<DiscoveryEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_discovery_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
   }
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_1_car(F1Car self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_1_car(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_discovery_event(
+    DiscoveryEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case DiscoveryEvent_CarDiscovered(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_box_autoadd_f_1_car(field0, serializer);
+      case DiscoveryEvent_CarUpdated(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_box_autoadd_f_1_car(field0, serializer);
+      case DiscoveryEvent_DiscoveryStarted():
+        sse_encode_i_32(2, serializer);
+      case DiscoveryEvent_DiscoveryStopped():
+        sse_encode_i_32(3, serializer);
+      case DiscoveryEvent_Error(field0: final field0):
+        sse_encode_i_32(4, serializer);
+        sse_encode_String(field0, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_f_1_car(F1Car self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.number, serializer);
+    sse_encode_String(self.driverName, serializer);
+    sse_encode_String(self.teamName, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_opt_String(self.ipAddress, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.port, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_list_f_1_car(List<F1Car> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_f_1_car(item, serializer);
+    }
   }
 
   @protected
@@ -244,6 +831,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
+    }
   }
 
   @protected
@@ -258,14 +865,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
+    serializer.buffer.putBigUint64(self);
   }
+}
 
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
-  }
+@sealed
+class F1DiscoveryServiceImpl extends RustOpaque implements F1DiscoveryService {
+  // Not to be used by end users
+  F1DiscoveryServiceImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  F1DiscoveryServiceImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_F1DiscoveryService,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_F1DiscoveryService,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_F1DiscoveryServicePtr,
+  );
+
+  List<F1Car> getDiscoveredCars() => RustLib.instance.api
+      .crateApiDiscoveryF1DiscoveryServiceGetDiscoveredCars(that: this);
+
+  bool isDiscovering() => RustLib.instance.api
+      .crateApiDiscoveryF1DiscoveryServiceIsDiscovering(that: this);
+
+  Stream<DiscoveryEvent> loadMockCars() => RustLib.instance.api
+      .crateApiDiscoveryF1DiscoveryServiceLoadMockCars(that: this);
+
+  Stream<DiscoveryEvent> startDiscovery() => RustLib.instance.api
+      .crateApiDiscoveryF1DiscoveryServiceStartDiscovery(that: this);
 }

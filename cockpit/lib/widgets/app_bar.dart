@@ -4,12 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
-import 'package:cockpit/services/f1_discovery_service.dart';
 
 class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
-  const F1AppBar({super.key});
+  final VoidCallback? onRefreshPressed;
+  const F1AppBar({super.key, this.onRefreshPressed});
 
   static final _logger = Logger(
     printer: PrettyPrinter(
@@ -76,12 +75,9 @@ class F1AppBar extends StatelessWidget implements PreferredSizeWidget {
                   _lastPressed = now;
 
                   HapticFeedback.mediumImpact();
-                  _logger.d(
-                    'Refresh button clicked - starting F1 car discovery',
-                  );
+                  _logger.d('Refresh button clicked - refreshing discovery');
 
-                  final discoveryService = context.read<F1DiscoveryService>();
-                  discoveryService.startDiscovery();
+                  onRefreshPressed?.call();
                 },
               ),
             ],

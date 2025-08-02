@@ -1,4 +1,4 @@
-import 'package:cockpit/models/f1car.dart';
+import 'package:cockpit/src/rust/api/models.dart';
 import 'package:cockpit/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 
