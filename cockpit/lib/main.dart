@@ -1,4 +1,5 @@
 import 'package:cockpit/pages/f1_home_page.dart';
+import 'package:cockpit/services/radio_service.dart';
 import 'package:cockpit/utils/app_colors.dart';
 import 'package:cockpit/utils/app_typography.dart';
 import 'package:cockpit/utils/assets_path.dart';
@@ -6,12 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:cockpit/widgets/app_bar.dart';
 import 'package:cockpit/src/rust/frb_generated.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
 
-  runApp(const F1App());
+  runApp(
+    ChangeNotifierProvider(create: (_) => RadioService(), child: const F1App()),
+  );
 }
 
 class F1App extends StatelessWidget {

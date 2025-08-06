@@ -44,8 +44,8 @@ class F1HomePageState extends State<F1HomePage> {
   }
 
   void refreshDiscovery() {
-    // _startDiscovery();
-    _loadMockCars();
+    _startDiscovery();
+    // _loadMockCars();
   }
 
   @override
@@ -59,8 +59,8 @@ class F1HomePageState extends State<F1HomePage> {
     setState(() => _isLoading = true);
     try {
       _discoveryService = F1DiscoveryService();
-      await _loadMockCars();
-      // await _startDiscovery();
+      // await _loadMockCars();
+      await _startDiscovery();
     } catch (e) {
       _logger.e('Failed to initialize discovery: $e');
     } finally {

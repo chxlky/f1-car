@@ -1,9 +1,8 @@
-import 'package:cockpit/services/udp_radio_service.dart';
-import 'package:cockpit/models/radio_connection_state.dart';
-import 'package:cockpit/models/server_message.dart';
+import 'package:cockpit/services/radio_service.dart';
 import 'package:cockpit/src/rust/api/models.dart';
 import 'package:cockpit/utils/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class RadioCommunicationPage extends StatefulWidget {
   final F1Car car;
@@ -15,8 +14,7 @@ class RadioCommunicationPage extends StatefulWidget {
 }
 
 class _RadioCommunicationPageState extends State<RadioCommunicationPage> {
-  late UdpRadioService _radioService;
-  final TextEditingController _messageController = TextEditingController();
+  late RadioService _radioService;
   final List<String> _messages = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -26,44 +24,43 @@ class _RadioCommunicationPageState extends State<RadioCommunicationPage> {
   @override
   void initState() {
     super.initState();
-    _radioService = UdpRadioService();
+    _radioService = context.read<RadioService>();
     _connectToCar();
     _listenToMessages();
   }
 
   void _connectToCar() async {
-    _addMessage('Connecting to car ${widget.car.number}...');
-    final success = await _radioService.connect(widget.car);
-    if (success) {
-      _addMessage('✅ Connected to car ${widget.car.number}');
-    } else {
-      _addMessage('❌ Failed to connect: ${_radioService.lastError}');
-    }
+    // No need to call _addMessage here, the service will notify of connection state
+    await _radioService.connect(widget.car);
   }
 
   void _listenToMessages() {
     _radioService.messageStream.listen((message) {
-      if (message is ConfigMessage) {
-        _addMessage(
-          '📡 Car config: #${message.config.number} ${message.config.driverName} (${message.config.teamName})',
-        );
-      } else if (message is ConfigUpdatedMessage) {
-        _addMessage(
-          '⚙️ Config ${message.success ? 'updated' : 'failed'}: ${message.message}',
-        );
-      } else if (message is PongMessage) {
-        final latency =
-            DateTime.now().millisecondsSinceEpoch - message.timestamp;
-        _addMessage('🏓 Pong received (${latency}ms)');
-      }
-    });
-
-    _radioService.addListener(() {
-      setState(() {});
+      if (!mounted) return;
+      message.when(
+        identity: (identity) => _addMessage(
+          '📡 Car identity: #${identity.number} ${identity.driverName} (${identity.teamName})',
+        ),
+        physics: (physics) => _addMessage(
+          '⚙️ Car physics: Max Steering=${physics.maxSteeringAngle}, Max Throttle=${physics.maxThrottle}',
+        ),
+        identityUpdated: (success, message) => _addMessage(
+          '✅ Identity ${success ? 'updated' : 'failed'}: $message',
+        ),
+        physicsUpdated: (success, message) => _addMessage(
+          '✅ Physics ${success ? 'updated' : 'failed'}: $message',
+        ),
+        pong: (timestamp) {
+          final latency = DateTime.now().millisecondsSinceEpoch - timestamp;
+          _addMessage('🏓 Pong received (${latency}ms)');
+        },
+        error: (message) => _addMessage('❌ Error: $message'),
+      );
     });
   }
 
   void _addMessage(String message) {
+    if (!mounted) return;
     setState(() {
       _messages.add(
         '[${DateTime.now().toLocal().toString().substring(11, 19)}] $message',
@@ -95,52 +92,64 @@ class _RadioCommunicationPageState extends State<RadioCommunicationPage> {
   }
 
   Widget _buildConnectionStatus() {
-    final state = _radioService.connectionState;
-    Color statusColor;
-    String statusText;
-    IconData statusIcon;
+    return Consumer<RadioService>(
+      builder: (context, service, child) {
+        final state = service.connectionState;
+        Color statusColor;
+        String statusText;
+        IconData statusIcon;
 
-    switch (state) {
-      case RadioConnectionState.connected:
-        statusColor = Colors.green;
-        statusText = 'Connected';
-        statusIcon = Icons.radio;
-        break;
-      case RadioConnectionState.connecting:
-        statusColor = Colors.orange;
-        statusText = 'Connecting...';
-        statusIcon = Icons.sync;
-        break;
-      case RadioConnectionState.error:
-        statusColor = Colors.red;
-        statusText = 'Error';
-        statusIcon = Icons.error;
-        break;
-      case RadioConnectionState.disconnected:
-        statusColor = Colors.grey;
-        statusText = 'Disconnected';
-        statusIcon = Icons.radio_button_off;
-        break;
-    }
+        switch (state) {
+          case RadioConnectionState.connected:
+            statusColor = Colors.green;
+            statusText = 'Connected';
+            statusIcon = Icons.radio;
+            _addMessage('✅ Connected to car ${widget.car.number}');
+            break;
+          case RadioConnectionState.connecting:
+            statusColor = Colors.orange;
+            statusText = 'Connecting...';
+            statusIcon = Icons.sync;
+            break;
+          case RadioConnectionState.error:
+            statusColor = Colors.red;
+            statusText = 'Error';
+            statusIcon = Icons.error;
+            if (service.lastError != null) {
+              _addMessage('❌ Failed to connect: ${service.lastError}');
+            }
+            break;
+          case RadioConnectionState.disconnected:
+            statusColor = Colors.grey;
+            statusText = 'Disconnected';
+            statusIcon = Icons.radio_button_off;
+            _addMessage('🔌 Disconnected from car ${widget.car.number}');
+            break;
+        }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        border: Border.all(color: statusColor),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(statusIcon, color: statusColor, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            statusText,
-            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            border: Border.all(color: statusColor),
+            borderRadius: BorderRadius.circular(8),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(statusIcon, color: statusColor, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                statusText,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -324,8 +333,7 @@ class _RadioCommunicationPageState extends State<RadioCommunicationPage> {
 
   @override
   void dispose() {
-    _radioService.dispose(); // This will handle disconnect internally
-    _messageController.dispose();
+    _radioService.disconnect();
     _scrollController.dispose();
     super.dispose();
   }

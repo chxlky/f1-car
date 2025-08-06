@@ -3,8 +3,10 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api.dart';
 import 'api/discovery.dart';
 import 'api/models.dart';
+import 'api/radio.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -65,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1281884717;
+  int get rustContentHash => 454718847;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -94,6 +96,47 @@ abstract class RustLibApi extends BaseApi {
     required F1DiscoveryService that,
   });
 
+  Stream<RadioEvent> crateApiRadioUdpRadioServiceConnect({
+    required UdpRadioService that,
+    required F1Car car,
+  });
+
+  Future<UdpRadioService> crateApiRadioUdpRadioServiceDefault();
+
+  Future<void> crateApiRadioUdpRadioServiceDisconnect({
+    required UdpRadioService that,
+  });
+
+  UdpRadioService crateApiRadioUdpRadioServiceNew();
+
+  Future<void> crateApiRadioUdpRadioServicePing({
+    required UdpRadioService that,
+  });
+
+  Future<void> crateApiRadioUdpRadioServiceRequestIdentity({
+    required UdpRadioService that,
+  });
+
+  Future<void> crateApiRadioUdpRadioServiceRequestPhysics({
+    required UdpRadioService that,
+  });
+
+  Future<void> crateApiRadioUdpRadioServiceSendControl({
+    required UdpRadioService that,
+    required int steering,
+    required int throttle,
+  });
+
+  Future<void> crateApiRadioUdpRadioServiceUpdateIdentity({
+    required UdpRadioService that,
+    required CarIdentity identity,
+  });
+
+  Future<void> crateApiRadioUdpRadioServiceUpdatePhysics({
+    required UdpRadioService that,
+    required CarPhysics physics,
+  });
+
   Future<F1Car> crateApiModelsF1CarNew({
     required int number,
     required String driverName,
@@ -103,6 +146,8 @@ abstract class RustLibApi extends BaseApi {
     int? port,
   });
 
+  Future<void> crateApiInitApp();
+
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_F1DiscoveryService;
 
@@ -111,6 +156,15 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_F1DiscoveryServicePtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_UdpRadioService;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_UdpRadioService;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_UdpRadioServicePtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -294,6 +348,360 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<RadioEvent> crateApiRadioUdpRadioServiceConnect({
+    required UdpRadioService that,
+    required F1Car car,
+  }) {
+    final sink = RustStreamSink<RadioEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+              that,
+              serializer,
+            );
+            sse_encode_box_autoadd_f_1_car(car, serializer);
+            sse_encode_StreamSink_radio_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 6,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiRadioUdpRadioServiceConnectConstMeta,
+          argValues: [that, car, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceConnectConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_connect",
+        argNames: ["that", "car", "sink"],
+      );
+
+  @override
+  Future<UdpRadioService> crateApiRadioUdpRadioServiceDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceDefaultConstMeta =>
+      const TaskConstMeta(debugName: "UdpRadioService_default", argNames: []);
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceDisconnect({
+    required UdpRadioService that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceDisconnectConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceDisconnectConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_disconnect",
+        argNames: ["that"],
+      );
+
+  @override
+  UdpRadioService crateApiRadioUdpRadioServiceNew() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceNewConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceNewConstMeta =>
+      const TaskConstMeta(debugName: "UdpRadioService_new", argNames: []);
+
+  @override
+  Future<void> crateApiRadioUdpRadioServicePing({
+    required UdpRadioService that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServicePingConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServicePingConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_ping",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceRequestIdentity({
+    required UdpRadioService that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceRequestIdentityConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceRequestIdentityConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_request_identity",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceRequestPhysics({
+    required UdpRadioService that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceRequestPhysicsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceRequestPhysicsConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_request_physics",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceSendControl({
+    required UdpRadioService that,
+    required int steering,
+    required int throttle,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          sse_encode_i_32(steering, serializer);
+          sse_encode_i_32(throttle, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceSendControlConstMeta,
+        argValues: [that, steering, throttle],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceSendControlConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_send_control",
+        argNames: ["that", "steering", "throttle"],
+      );
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceUpdateIdentity({
+    required UdpRadioService that,
+    required CarIdentity identity,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_car_identity(identity, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceUpdateIdentityConstMeta,
+        argValues: [that, identity],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceUpdateIdentityConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_update_identity",
+        argNames: ["that", "identity"],
+      );
+
+  @override
+  Future<void> crateApiRadioUdpRadioServiceUpdatePhysics({
+    required UdpRadioService that,
+    required CarPhysics physics,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_car_physics(physics, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiRadioUdpRadioServiceUpdatePhysicsConstMeta,
+        argValues: [that, physics],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRadioUdpRadioServiceUpdatePhysicsConstMeta =>
+      const TaskConstMeta(
+        debugName: "UdpRadioService_update_physics",
+        argNames: ["that", "physics"],
+      );
+
+  @override
   Future<F1Car> crateApiModelsF1CarNew({
     required int number,
     required String driverName,
@@ -315,7 +723,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 16,
             port: port_,
           );
         },
@@ -342,6 +750,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     ],
   );
 
+  @override
+  Future<void> crateApiInitApp() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiInitAppConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInitAppConstMeta =>
+      const TaskConstMeta(debugName: "init_app", argNames: []);
+
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_F1DiscoveryService => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService;
@@ -349,6 +784,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RustArcDecrementStrongCountFnType
   get rust_arc_decrement_strong_count_F1DiscoveryService => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_UdpRadioService => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_UdpRadioService => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -366,12 +809,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UdpRadioService
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   F1DiscoveryService
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return F1DiscoveryServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  UdpRadioService
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -384,7 +845,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UdpRadioService
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   RustStreamSink<DiscoveryEvent> dco_decode_StreamSink_discovery_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<RadioEvent> dco_decode_StreamSink_radio_event_Sse(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -404,6 +882,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CarIdentity dco_decode_box_autoadd_car_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_car_identity(raw);
+  }
+
+  @protected
+  CarPhysics dco_decode_box_autoadd_car_physics(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_car_physics(raw);
+  }
+
+  @protected
   F1Car dco_decode_box_autoadd_f_1_car(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_f_1_car(raw);
@@ -413,6 +903,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int dco_decode_box_autoadd_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  ServerMessage dco_decode_box_autoadd_server_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_server_message(raw);
+  }
+
+  @protected
+  CarIdentity dco_decode_car_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return CarIdentity(
+      number: dco_decode_u_8(arr[0]),
+      driverName: dco_decode_String(arr[1]),
+      teamName: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  CarPhysics dco_decode_car_physics(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CarPhysics(
+      maxSteeringAngle: dco_decode_i_32(arr[0]),
+      maxThrottle: dco_decode_i_32(arr[1]),
+    );
   }
 
   @protected
@@ -461,6 +982,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
   List<F1Car> dco_decode_list_f_1_car(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_f_1_car).toList();
@@ -482,6 +1009,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
+  }
+
+  @protected
+  RadioEvent dco_decode_radio_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return RadioEvent_Connected();
+      case 1:
+        return RadioEvent_Disconnected();
+      case 2:
+        return RadioEvent_Message(
+          dco_decode_box_autoadd_server_message(raw[1]),
+        );
+      case 3:
+        return RadioEvent_Error(dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  ServerMessage dco_decode_server_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return ServerMessage_Identity(
+          dco_decode_box_autoadd_car_identity(raw[1]),
+        );
+      case 1:
+        return ServerMessage_Physics(
+          dco_decode_box_autoadd_car_physics(raw[1]),
+        );
+      case 2:
+        return ServerMessage_Pong(timestamp: dco_decode_i_64(raw[1]));
+      case 3:
+        return ServerMessage_IdentityUpdated(
+          success: dco_decode_bool(raw[1]),
+          message: dco_decode_String(raw[2]),
+        );
+      case 4:
+        return ServerMessage_PhysicsUpdated(
+          success: dco_decode_bool(raw[1]),
+          message: dco_decode_String(raw[2]),
+        );
+      case 5:
+        return ServerMessage_Error(message: dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
   }
 
   @protected
@@ -522,12 +1099,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UdpRadioService
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   F1DiscoveryService
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return F1DiscoveryServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  UdpRadioService
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -546,7 +1147,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UdpRadioService
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UdpRadioServiceImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   RustStreamSink<DiscoveryEvent> sse_decode_StreamSink_discovery_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<RadioEvent> sse_decode_StreamSink_radio_event_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -567,6 +1188,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CarIdentity sse_decode_box_autoadd_car_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_car_identity(deserializer));
+  }
+
+  @protected
+  CarPhysics sse_decode_box_autoadd_car_physics(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_car_physics(deserializer));
+  }
+
+  @protected
   F1Car sse_decode_box_autoadd_f_1_car(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_1_car(deserializer));
@@ -576,6 +1211,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  ServerMessage sse_decode_box_autoadd_server_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_server_message(deserializer));
+  }
+
+  @protected
+  CarIdentity sse_decode_car_identity(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_number = sse_decode_u_8(deserializer);
+    var var_driverName = sse_decode_String(deserializer);
+    var var_teamName = sse_decode_String(deserializer);
+    return CarIdentity(
+      number: var_number,
+      driverName: var_driverName,
+      teamName: var_teamName,
+    );
+  }
+
+  @protected
+  CarPhysics sse_decode_car_physics(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_maxSteeringAngle = sse_decode_i_32(deserializer);
+    var var_maxThrottle = sse_decode_i_32(deserializer);
+    return CarPhysics(
+      maxSteeringAngle: var_maxSteeringAngle,
+      maxThrottle: var_maxThrottle,
+    );
   }
 
   @protected
@@ -628,6 +1295,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
   List<F1Car> sse_decode_list_f_1_car(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -665,6 +1338,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       return (sse_decode_box_autoadd_i_32(deserializer));
     } else {
       return null;
+    }
+  }
+
+  @protected
+  RadioEvent sse_decode_radio_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        return RadioEvent_Connected();
+      case 1:
+        return RadioEvent_Disconnected();
+      case 2:
+        var var_field0 = sse_decode_box_autoadd_server_message(deserializer);
+        return RadioEvent_Message(var_field0);
+      case 3:
+        var var_field0 = sse_decode_String(deserializer);
+        return RadioEvent_Error(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  ServerMessage sse_decode_server_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_box_autoadd_car_identity(deserializer);
+        return ServerMessage_Identity(var_field0);
+      case 1:
+        var var_field0 = sse_decode_box_autoadd_car_physics(deserializer);
+        return ServerMessage_Physics(var_field0);
+      case 2:
+        var var_timestamp = sse_decode_i_64(deserializer);
+        return ServerMessage_Pong(timestamp: var_timestamp);
+      case 3:
+        var var_success = sse_decode_bool(deserializer);
+        var var_message = sse_decode_String(deserializer);
+        return ServerMessage_IdentityUpdated(
+          success: var_success,
+          message: var_message,
+        );
+      case 4:
+        var var_success = sse_decode_bool(deserializer);
+        var var_message = sse_decode_String(deserializer);
+        return ServerMessage_PhysicsUpdated(
+          success: var_success,
+          message: var_message,
+        );
+      case 5:
+        var var_message = sse_decode_String(deserializer);
+        return ServerMessage_Error(message: var_message);
+      default:
+        throw UnimplementedError('');
     }
   }
 
@@ -709,6 +1440,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UdpRadioServiceImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
     F1DiscoveryService self,
     SseSerializer serializer,
@@ -722,6 +1466,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UdpRadioServiceImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
     F1DiscoveryService self,
     SseSerializer serializer,
@@ -729,6 +1486,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as F1DiscoveryServiceImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UdpRadioServiceImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -751,6 +1521,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_radio_event_Sse(
+    RustStreamSink<RadioEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_radio_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -763,6 +1550,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_car_identity(
+    CarIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_car_identity(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_car_physics(
+    CarPhysics self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_car_physics(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_f_1_car(F1Car self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_1_car(self, serializer);
@@ -772,6 +1577,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_server_message(
+    ServerMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_server_message(self, serializer);
+  }
+
+  @protected
+  void sse_encode_car_identity(CarIdentity self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.number, serializer);
+    sse_encode_String(self.driverName, serializer);
+    sse_encode_String(self.teamName, serializer);
+  }
+
+  @protected
+  void sse_encode_car_physics(CarPhysics self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.maxSteeringAngle, serializer);
+    sse_encode_i_32(self.maxThrottle, serializer);
   }
 
   @protected
@@ -815,6 +1644,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
   void sse_encode_list_f_1_car(List<F1Car> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -850,6 +1685,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_i_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_radio_event(RadioEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case RadioEvent_Connected():
+        sse_encode_i_32(0, serializer);
+      case RadioEvent_Disconnected():
+        sse_encode_i_32(1, serializer);
+      case RadioEvent_Message(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_box_autoadd_server_message(field0, serializer);
+      case RadioEvent_Error(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(field0, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_server_message(ServerMessage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case ServerMessage_Identity(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_box_autoadd_car_identity(field0, serializer);
+      case ServerMessage_Physics(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_box_autoadd_car_physics(field0, serializer);
+      case ServerMessage_Pong(timestamp: final timestamp):
+        sse_encode_i_32(2, serializer);
+        sse_encode_i_64(timestamp, serializer);
+      case ServerMessage_IdentityUpdated(
+        success: final success,
+        message: final message,
+      ):
+        sse_encode_i_32(3, serializer);
+        sse_encode_bool(success, serializer);
+        sse_encode_String(message, serializer);
+      case ServerMessage_PhysicsUpdated(
+        success: final success,
+        message: final message,
+      ):
+        sse_encode_i_32(4, serializer);
+        sse_encode_bool(success, serializer);
+        sse_encode_String(message, serializer);
+      case ServerMessage_Error(message: final message):
+        sse_encode_i_32(5, serializer);
+        sse_encode_String(message, serializer);
     }
   }
 
@@ -905,4 +1790,57 @@ class F1DiscoveryServiceImpl extends RustOpaque implements F1DiscoveryService {
 
   Stream<DiscoveryEvent> startDiscovery() => RustLib.instance.api
       .crateApiDiscoveryF1DiscoveryServiceStartDiscovery(that: this);
+}
+
+@sealed
+class UdpRadioServiceImpl extends RustOpaque implements UdpRadioService {
+  // Not to be used by end users
+  UdpRadioServiceImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  UdpRadioServiceImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_UdpRadioService,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_UdpRadioService,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_UdpRadioServicePtr,
+  );
+
+  Stream<RadioEvent> connect({required F1Car car}) => RustLib.instance.api
+      .crateApiRadioUdpRadioServiceConnect(that: this, car: car);
+
+  Future<void> disconnect() =>
+      RustLib.instance.api.crateApiRadioUdpRadioServiceDisconnect(that: this);
+
+  Future<void> ping() =>
+      RustLib.instance.api.crateApiRadioUdpRadioServicePing(that: this);
+
+  Future<void> requestIdentity() => RustLib.instance.api
+      .crateApiRadioUdpRadioServiceRequestIdentity(that: this);
+
+  Future<void> requestPhysics() => RustLib.instance.api
+      .crateApiRadioUdpRadioServiceRequestPhysics(that: this);
+
+  Future<void> sendControl({required int steering, required int throttle}) =>
+      RustLib.instance.api.crateApiRadioUdpRadioServiceSendControl(
+        that: this,
+        steering: steering,
+        throttle: throttle,
+      );
+
+  Future<void> updateIdentity({required CarIdentity identity}) =>
+      RustLib.instance.api.crateApiRadioUdpRadioServiceUpdateIdentity(
+        that: this,
+        identity: identity,
+      );
+
+  Future<void> updatePhysics({required CarPhysics physics}) => RustLib
+      .instance
+      .api
+      .crateApiRadioUdpRadioServiceUpdatePhysics(that: this, physics: physics);
 }

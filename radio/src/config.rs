@@ -2,12 +2,13 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use log::info;
-use telemetry::CarConfiguration;
+use telemetry::{CarIdentity, CarPhysics};
 use tokio::fs;
 
 pub struct ConfigManager {
     config_path: PathBuf,
-    config: CarConfiguration,
+    identity: CarIdentity,
+    physics: CarPhysics,
 }
 
 impl ConfigManager {
@@ -20,76 +21,103 @@ impl ConfigManager {
         let config_path = config_dir.join("car_config.toml");
 
         if !config_dir.exists() {
-            fs::create_dir_all(config_dir).await.with_context(|| {
-                format!(
-                    "Failed to create config directory: {}",
-                    config_dir.display()
-                )
-            })?;
+            fs::create_dir_all(config_dir)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to create config directory: {}",
+                        config_dir.display()
+                    )
+                })?;
             info!("Created config directory at {}", config_dir.display());
         }
 
-        let config = if config_path.exists() {
+        let identity = if config_path.exists() {
             Self::load_config(&config_path).await?
         } else {
             info!(
                 "No existing config found, creating default configuration at {}",
                 config_path.display()
             );
-            let default_config = CarConfiguration::default();
-            Self::save_config(&config_path, &default_config)
+            let default_identity = CarIdentity {
+                number: 0,
+                driver_name: "Unknown Driver".to_string(),
+                team_name: "Unknown Team".to_string(),
+            };
+            Self::save_config(&config_path, &default_identity)
                 .await
                 .with_context(|| {
                     format!("Failed to save default config to {}", config_path.display())
                 })?;
+            default_identity
+        };
 
-            default_config
+        let physics = CarPhysics {
+            max_steering_angle: 30,
+            max_throttle: 100,
         };
 
         info!(
             "Loaded car config: #{} {} ({})",
-            config.number, config.driver_name, config.team_name
+            identity.number, identity.driver_name, identity.team_name
         );
 
         Ok(Self {
             config_path,
-            config,
+            identity,
+            physics,
         })
     }
 
-    pub fn get_config(&self) -> &CarConfiguration {
-        &self.config
+    pub fn get_identity(&self) -> &CarIdentity {
+        &self.identity
     }
 
-    pub async fn update_config(&mut self, new_config: CarConfiguration) -> Result<()> {
+    pub fn get_physics(&self) -> &CarPhysics {
+        &self.physics
+    }
+
+    pub async fn update_identity(&mut self, new_identity: CarIdentity) -> Result<()> {
         info!(
-            "Updating car config: #{} {} ({}) -> #{} {} ({})",
-            self.config.number,
-            self.config.driver_name,
-            self.config.team_name,
-            new_config.number,
-            new_config.driver_name,
-            new_config.team_name
+            "Updating car identity: #{} {} ({}) -> #{} {} ({})",
+            self.identity.number,
+            self.identity.driver_name,
+            self.identity.team_name,
+            new_identity.number,
+            new_identity.driver_name,
+            new_identity.team_name
         );
 
-        self.config = new_config;
-        Self::save_config(&self.config_path, &self.config).await?;
-
+        self.identity = new_identity;
+        Self::save_config(&self.config_path, &self.identity).await?;
         Ok(())
     }
 
-    async fn load_config(path: &Path) -> Result<CarConfiguration> {
+    pub async fn update_physics(&mut self, new_physics: CarPhysics) -> Result<()> {
+        info!(
+            "Updating car physics: max_steering_angle={}, max_throttle={} -> max_steering_angle={}, max_throttle={}",
+            self.physics.max_steering_angle,
+            self.physics.max_throttle,
+            new_physics.max_steering_angle,
+            new_physics.max_throttle
+        );
+
+        self.physics = new_physics;
+        Ok(())
+    }
+
+    async fn load_config(path: &Path) -> Result<CarIdentity> {
         let content = fs::read_to_string(path)
             .await
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
 
-        let config: CarConfiguration = toml::from_str(&content)
+        let config: CarIdentity = toml::from_str(&content)
             .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
 
         Ok(config)
     }
 
-    async fn save_config(path: &Path, config: &CarConfiguration) -> Result<()> {
+    async fn save_config(path: &Path, config: &CarIdentity) -> Result<()> {
         let content = toml::to_string_pretty(config)
             .with_context(|| format!("Failed to serialize config: {}", path.display()))?;
 

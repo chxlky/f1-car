@@ -26,9 +26,9 @@ impl DiscoveryService {
     }
 
     pub async fn start_advertising(&mut self, port: u16) -> Result<()> {
-        let config = {
+        let identity = {
             let config_manager = self.config_manager.lock().await;
-            config_manager.get_config().clone()
+            config_manager.get_identity().clone()
         };
 
         if let Some(service_info) = &self.service_info {
@@ -40,11 +40,10 @@ impl DiscoveryService {
             self.service_info = None;
         }
 
-        let local_ip = local_ip()
-            .context("Failed to get local IP address")?;
+        let local_ip = local_ip().context("Failed to get local IP address")?;
         info!("Using Local IP: {local_ip}");
 
-        let service_name = format!("car-{}", config.number);
+        let service_name = format!("car-{}", identity.number);
         let service_type = "_f1-car._udp.local.";
         let host_name = format!("{service_name}.local.");
 
@@ -55,9 +54,9 @@ impl DiscoveryService {
 
         let version = env!("CARGO_PKG_VERSION").to_string();
         let properties = [
-            ("number", &config.number.to_string()),
-            ("driver", &config.driver_name),
-            ("team", &config.team_name),
+            ("number", &identity.number.to_string()),
+            ("driver", &identity.driver_name),
+            ("team", &identity.team_name),
             ("version", &version),
         ];
 
@@ -75,7 +74,7 @@ impl DiscoveryService {
 
         info!(
             "Advertising F1 Car #{} ({} - {}) on network as '{}'",
-            config.number, config.driver_name, config.team_name, service_name
+            identity.number, identity.driver_name, identity.team_name, service_name
         );
 
         self.mdns

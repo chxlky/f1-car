@@ -5,8 +5,52 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'models.freezed.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+
+class CarIdentity {
+  final int number;
+  final String driverName;
+  final String teamName;
+
+  const CarIdentity({
+    required this.number,
+    required this.driverName,
+    required this.teamName,
+  });
+
+  @override
+  int get hashCode => number.hashCode ^ driverName.hashCode ^ teamName.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CarIdentity &&
+          runtimeType == other.runtimeType &&
+          number == other.number &&
+          driverName == other.driverName &&
+          teamName == other.teamName;
+}
+
+class CarPhysics {
+  final int maxSteeringAngle;
+  final int maxThrottle;
+
+  const CarPhysics({required this.maxSteeringAngle, required this.maxThrottle});
+
+  @override
+  int get hashCode => maxSteeringAngle.hashCode ^ maxThrottle.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CarPhysics &&
+          runtimeType == other.runtimeType &&
+          maxSteeringAngle == other.maxSteeringAngle &&
+          maxThrottle == other.maxThrottle;
+}
 
 class F1Car {
   final int number;
@@ -62,4 +106,26 @@ class F1Car {
           version == other.version &&
           ipAddress == other.ipAddress &&
           port == other.port;
+}
+
+@freezed
+sealed class ServerMessage with _$ServerMessage {
+  const ServerMessage._();
+
+  const factory ServerMessage.identity(CarIdentity field0) =
+      ServerMessage_Identity;
+  const factory ServerMessage.physics(CarPhysics field0) =
+      ServerMessage_Physics;
+  const factory ServerMessage.pong({required PlatformInt64 timestamp}) =
+      ServerMessage_Pong;
+  const factory ServerMessage.identityUpdated({
+    required bool success,
+    required String message,
+  }) = ServerMessage_IdentityUpdated;
+  const factory ServerMessage.physicsUpdated({
+    required bool success,
+    required String message,
+  }) = ServerMessage_PhysicsUpdated;
+  const factory ServerMessage.error({required String message}) =
+      ServerMessage_Error;
 }

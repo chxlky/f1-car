@@ -6,8 +6,10 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api.dart';
 import 'api/discovery.dart';
 import 'api/models.dart';
+import 'api/radio.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -25,6 +27,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   get rust_arc_decrement_strong_count_F1DiscoveryServicePtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService;
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_UdpRadioServicePtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
@@ -35,8 +41,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UdpRadioService
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    dynamic raw,
+  );
+
+  @protected
   F1DiscoveryService
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    dynamic raw,
+  );
+
+  @protected
+  UdpRadioService
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
     dynamic raw,
   );
 
@@ -47,9 +65,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UdpRadioService
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<DiscoveryEvent> dco_decode_StreamSink_discovery_event_Sse(
     dynamic raw,
   );
+
+  @protected
+  RustStreamSink<RadioEvent> dco_decode_StreamSink_radio_event_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -58,10 +85,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  CarIdentity dco_decode_box_autoadd_car_identity(dynamic raw);
+
+  @protected
+  CarPhysics dco_decode_box_autoadd_car_physics(dynamic raw);
+
+  @protected
   F1Car dco_decode_box_autoadd_f_1_car(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  ServerMessage dco_decode_box_autoadd_server_message(dynamic raw);
+
+  @protected
+  CarIdentity dco_decode_car_identity(dynamic raw);
+
+  @protected
+  CarPhysics dco_decode_car_physics(dynamic raw);
 
   @protected
   DiscoveryEvent dco_decode_discovery_event(dynamic raw);
@@ -71,6 +113,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
   List<F1Car> dco_decode_list_f_1_car(dynamic raw);
@@ -83,6 +128,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  RadioEvent dco_decode_radio_event(dynamic raw);
+
+  @protected
+  ServerMessage dco_decode_server_message(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -103,8 +154,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UdpRadioService
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   F1DiscoveryService
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UdpRadioService
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
     SseDeserializer deserializer,
   );
 
@@ -115,7 +178,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UdpRadioService
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<DiscoveryEvent> sse_decode_StreamSink_discovery_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<RadioEvent> sse_decode_StreamSink_radio_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -126,10 +200,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  CarIdentity sse_decode_box_autoadd_car_identity(SseDeserializer deserializer);
+
+  @protected
+  CarPhysics sse_decode_box_autoadd_car_physics(SseDeserializer deserializer);
+
+  @protected
   F1Car sse_decode_box_autoadd_f_1_car(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  ServerMessage sse_decode_box_autoadd_server_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CarIdentity sse_decode_car_identity(SseDeserializer deserializer);
+
+  @protected
+  CarPhysics sse_decode_car_physics(SseDeserializer deserializer);
 
   @protected
   DiscoveryEvent sse_decode_discovery_event(SseDeserializer deserializer);
@@ -139,6 +230,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
   List<F1Car> sse_decode_list_f_1_car(SseDeserializer deserializer);
@@ -151,6 +245,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  RadioEvent sse_decode_radio_event(SseDeserializer deserializer);
+
+  @protected
+  ServerMessage sse_decode_server_message(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -176,8 +276,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
     F1DiscoveryService self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
     SseSerializer serializer,
   );
 
@@ -189,8 +303,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    UdpRadioService self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_discovery_event_Sse(
     RustStreamSink<DiscoveryEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_radio_event_Sse(
+    RustStreamSink<RadioEvent> self,
     SseSerializer serializer,
   );
 
@@ -201,10 +328,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_car_identity(
+    CarIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_car_physics(
+    CarPhysics self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_f_1_car(F1Car self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_server_message(
+    ServerMessage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_car_identity(CarIdentity self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_car_physics(CarPhysics self, SseSerializer serializer);
 
   @protected
   void sse_encode_discovery_event(
@@ -217,6 +368,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_f_1_car(List<F1Car> self, SseSerializer serializer);
@@ -232,6 +386,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_radio_event(RadioEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_server_message(ServerMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -263,6 +423,22 @@ class RustLibWire implements BaseWire {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
         ptr,
       );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+        ptr,
+      );
 }
 
 @JS('wasm_bindgen')
@@ -278,6 +454,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerF1DiscoveryService(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUdpRadioService(
     int ptr,
   );
 }
