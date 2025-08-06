@@ -38,7 +38,6 @@ f1-car/
 - Receives live telemetry data
 - Displays camera feed
 - Sends control inputs (steering, throttle) to the car
-- Powered by [flutter_rust_bridge](https://cjycode.com/flutter_rust_bridge/)
 
 ---
 
