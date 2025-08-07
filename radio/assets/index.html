@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>F1 Car UDP Camera Stream</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+
+      #info-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #111;
+        border-radius: 8px;
+        border: 2px solid #333;
+      }
+
+      .protocol-info {
+        background-color: #222;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+        text-align: left;
+      }
+
+      .status {
+        margin: 20px 0;
+        padding: 10px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .status.connected {
+        background-color: #2d5a2d;
+        color: #90ee90;
+      }
+
+      .status.info {
+        background-color: #2d4a5a;
+        color: #87ceeb;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .stat-item {
+        background-color: #222;
+        padding: 15px;
+        border-radius: 4px;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #aaa;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
+      }
+
+      pre {
+        background-color: #1a1a1a;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 12px;
+        color: #90ee90;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🏎️ F1 Car UDP Camera Stream</h1>
+
+    <div id="info-container">
+      <div class="status connected">UDP Streaming Server Active</div>
+
+      <div class="protocol-info">
+        <h3>📡 UDP Camera Streaming Protocol</h3>
+        <p><strong>Server:</strong> 0.0.0.0:8081</p>
+        <p><strong>Protocol:</strong> Custom chunked UDP</p>
+        <p>
+          <strong>Discovery:</strong> Send "DISCOVER" to receive "CAMERA_SERVER"
+          response
+        </p>
+
+        <h4>Packet Format:</h4>
+        <pre>[frame_id:4][chunk_id:2][total_chunks:2][data_len:2][data...]</pre>
+
+        <h4>Camera Settings:</h4>
+        <ul>
+          <li><strong>Resolution:</strong> 1920x1080</li>
+          <li><strong>Framerate:</strong> 30 FPS</li>
+          <li><strong>Codec:</strong> MJPEG</li>
+          <li><strong>Orientation:</strong> Horizontal + Vertical flip</li>
+          <li><strong>Chunk Size:</strong> 1400 bytes (safe UDP payload)</li>
+        </ul>
+      </div>
+
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-label">Stream Type</div>
+          <div class="stat-value">Direct UDP</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Client Type</div>
+          <div class="stat-value">Flutter App</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Advantage</div>
+          <div class="stat-value">Zero Lag</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Max Clients</div>
+          <div class="stat-value">Unlimited</div>
+        </div>
+      </div>
+
+      <div class="status info">
+        <strong
+          >📱 Connect your Flutter app to this IP address to receive the camera
+          stream!</strong
+        >
+      </div>
+    </div>
+
+    <script>
+      // Update server IP address dynamically
+      const serverIP = window.location.hostname;
+      document.querySelector(
+        ".protocol-info p"
+      ).innerHTML = `<strong>Server:</strong> ${serverIP}:8081`;
+
+      // Simple status updates
+      setInterval(() => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        document.title = `F1 Car UDP Stream - ${timeStr}`;
+      }, 1000);
+    </script>
+  </body>
+</html>

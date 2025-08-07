@@ -1,202 +1,286 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use log::{error, info};
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::process::Stdio;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio::{
     io::{AsyncReadExt, BufReader},
-    process::{self, Child},
-    sync::{
-        broadcast::{self, Sender},
-        mpsc::{self, UnboundedSender},
-    },
-    time,
+    net::UdpSocket,
+    process,
+    time::sleep,
 };
 
-pub struct CameraHandler {
-    camera_process: Option<Child>,
-    stream_tx: Sender<Vec<u8>>,
-    control_tx: Option<UnboundedSender<CameraControl>>,
+pub struct UdpStreamer {
+    socket: Arc<UdpSocket>,
+    clients: Arc<Mutex<HashMap<SocketAddr, Instant>>>,
+    frame_buffer: Arc<Mutex<Option<Vec<u8>>>>,
 }
 
-#[allow(dead_code)]
-enum CameraControl {
-    Pause,
-    Resume,
-    Stop,
-}
+impl UdpStreamer {
+    pub async fn new() -> Result<Self> {
+        let socket = UdpSocket::bind("0.0.0.0:8081").await?;
+        info!("UDP streamer listening on 0.0.0.0:8081");
 
-impl CameraHandler {
-    pub fn new() -> Self {
-        let (stream_tx, _) = broadcast::channel(128); // Increased from 32 to 128
-
-        Self {
-            camera_process: None,
-            stream_tx,
-            control_tx: None,
-        }
+        Ok(Self {
+            socket: Arc::new(socket),
+            clients: Arc::new(Mutex::new(HashMap::new())),
+            frame_buffer: Arc::new(Mutex::new(None)),
+        })
     }
 
-    pub async fn start_mjpeg_stream(&mut self) -> Result<()> {
-        info!("Starting MJPEG camera stream...");
+    fn find_jpeg_start(buffer: &[u8]) -> Option<usize> {
+        buffer.windows(2).position(|w| w == [0xFF, 0xD8])
+    }
 
-        let (control_tx, mut control_rx) = mpsc::unbounded_channel::<CameraControl>();
-        self.control_tx = Some(control_tx);
+    fn find_jpeg_end(buffer: &[u8]) -> Option<usize> {
+        buffer.windows(2).position(|w| w == [0xFF, 0xD9])
+    }
 
-        // Resolutions that work: 640x480@30
-        // Laggy: 640x480@60
+    pub async fn start(&mut self) -> Result<()> {
+        // Start camera capture
+        self.start_camera_capture().await?;
 
-        let mut camera_process = process::Command::new("rpicam-vid")
-            .args([
-                "--width", "1280",
-                "--height", "720",
-                "--framerate", "30",
-                "--timeout", "0",
-                "--output", "-",
-                "--codec", "mjpeg",
-                "--quality", "50",
-                "--nopreview",
-                "--hflip",
-                "--vflip",
-                "--inline"
-            ])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("Failed to start MJPEG camera stream. Ensure 'rpicam-vid' is installed and camera is connected.")?;
+        // Start client discovery
+        self.start_client_discovery().await?;
 
-        let stdout = camera_process
-            .stdout
-            .take()
-            .context("Failed to get camera stdout")?;
-        self.camera_process = Some(camera_process);
+        // Start frame broadcasting
+        self.start_frame_broadcaster().await?;
 
-        let stream_tx = self.stream_tx.clone();
+        Ok(())
+    }
+
+    async fn start_camera_capture(&mut self) -> Result<()> {
+        info!("Starting camera capture with rpicam-vid MJPEG...");
+
+        let frame_buffer = self.frame_buffer.clone();
+
         tokio::spawn(async move {
-            let mut reader = BufReader::new(stdout);
-            let mut frame_buffer = Vec::new();
-            let mut temp_buffer = vec![0u8; 32768]; // Increased from 8192 to 32KB
-            let mut is_paused = false;
+            let mut frame_counter = 0u32;
 
             loop {
-                // Check for control messages
-                if let Ok(control) = control_rx.try_recv() {
-                    match control {
-                        CameraControl::Pause => {
-                            info!("Pausing camera processing");
-                            is_paused = true;
+                let mut child = match process::Command::new("rpicam-vid")
+                    .args([
+                        "-t",
+                        "0",
+                        "--width",
+                        "1600",
+                        "--height",
+                        "900",
+                        "--framerate",
+                        "30",
+                        "--codec",
+                        "mjpeg",
+                        "--hflip",
+                        "--vflip",
+                        "--nopreview",
+                        "-o",
+                        "-",
+                    ])
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::null()) // Suppress error output
+                    .spawn()
+                {
+                    Ok(child) => child,
+                    Err(e) => {
+                        error!("Failed to start rpicam-vid: {e}");
+                        sleep(Duration::from_secs(5)).await;
+                        continue;
+                    }
+                };
+
+                let stdout = child.stdout.take().expect("Failed to capture stdout");
+                let mut reader = BufReader::new(stdout);
+                let mut buffer = Vec::new();
+                let mut temp_buf = [0u8; 8192];
+
+                loop {
+                    match reader.read(&mut temp_buf).await {
+                        Ok(0) => break, // EOF
+                        Ok(n) => {
+                            buffer.extend_from_slice(&temp_buf[..n]);
+
+                            // Look for complete JPEG frames
+                            while let Some(start) = Self::find_jpeg_start(&buffer) {
+                                if let Some(end) = Self::find_jpeg_end(&buffer[start..]) {
+                                    let frame_end = start + end + 2;
+                                    let frame = buffer[start..frame_end].to_vec();
+                                    buffer.drain(..frame_end);
+
+                                    // Update the global frame buffer
+                                    if let Ok(mut current_frame) = frame_buffer.lock() {
+                                        *current_frame = Some(frame);
+                                        frame_counter += 1;
+
+                                        if frame_counter % 100 == 0 {
+                                            info!("Captured {frame_counter} frames");
+                                        }
+                                    }
+                                } else {
+                                    break; // Wait for more data
+                                }
+                            }
                         }
-                        CameraControl::Resume => {
-                            info!("Resuming camera processing");
-                            is_paused = false;
-                        }
-                        CameraControl::Stop => {
-                            info!("Stopping camera processing");
+                        Err(e) => {
+                            error!("Error reading from camera: {e}");
                             break;
                         }
                     }
                 }
 
-                if stream_tx.receiver_count() == 0 && !is_paused {
-                    info!("No receivers, pausing processing");
-                    is_paused = true;
-                    continue;
-                } else if stream_tx.receiver_count() > 0 && is_paused {
-                    info!("Receivers available, resuming processing");
-                    is_paused = false;
-                }
+                let _ = child.kill().await;
+                let _ = child.wait().await;
 
-                if is_paused {
-                    time::sleep(time::Duration::from_millis(100)).await;
-                    continue;
-                }
+                // Restart after a brief delay
+                sleep(Duration::from_millis(100)).await;
+            }
+        });
 
-                match reader.read(&mut temp_buffer).await {
-                    Ok(0) => {
-                        error!("MJPEG stream ended (EOF).");
-                        break;
-                    }
-                    Ok(n) => {
-                        frame_buffer.extend_from_slice(&temp_buffer[..n]);
+        Ok(())
+    }
 
-                        let mut start_idx = None;
-                        let mut end_idx = None;
+    async fn start_client_discovery(&self) -> Result<()> {
+        let socket = self.socket.clone();
+        let clients = self.clients.clone();
 
-                        for i in 0..frame_buffer.len().saturating_sub(1) {
-                            if frame_buffer[i] == 0xFF && frame_buffer[i + 1] == 0xD8 {
-                                start_idx = Some(i);
-                                break;
+        tokio::spawn(async move {
+            let mut buffer = [0u8; 1024];
+
+            loop {
+                match socket.recv_from(&mut buffer).await {
+                    Ok((len, addr)) => {
+                        let message = String::from_utf8_lossy(&buffer[..len]);
+
+                        if message == "DISCOVER" {
+                            info!("New client discovered: {addr}");
+
+                            // Add client to our list
+                            if let Ok(mut clients_map) = clients.lock() {
+                                clients_map.insert(addr, Instant::now());
                             }
-                        }
 
-                        if let Some(start) = start_idx {
-                            for i in start..frame_buffer.len().saturating_sub(1) {
-                                if frame_buffer[i] == 0xFF && frame_buffer[i + 1] == 0xD9 {
-                                    end_idx = Some(i + 2);
-                                    break;
-                                }
+                            // Send discovery response
+                            if let Err(e) = socket.send_to(b"CAMERA_SERVER", addr).await {
+                                error!("Failed to send discovery response to {addr}: {e}");
                             }
-                        }
-
-                        if let (Some(start), Some(end)) = (start_idx, end_idx) {
-                            let frame = frame_buffer[start..end].to_vec();
-                            if let Err(e) = stream_tx.send(frame) {
-                                // Only log error if there are receivers but send failed (e.g., channel full)
-                                if stream_tx.receiver_count() > 0 {
-                                    error!("Error broadcasting MJPEG data: {e}");
-                                }
-                            }
-                            frame_buffer.drain(..end);
-                        }
-
-                        // Prevent buffer from growing too large (e.g., if no start/end markers are found)
-                        if frame_buffer.len() > 1_000_000 {
-                            error!("MJPEG frame buffer exceeded 1MB, clearing.");
-                            frame_buffer.clear();
                         }
                     }
                     Err(e) => {
-                        error!("Error reading MJPEG stream from rpicam-vid: {e}");
-                        break;
+                        error!("Error receiving UDP message: {e}");
                     }
                 }
             }
-            info!("MJPEG camera stream reader task finished.");
         });
 
-        info!("MJPEG camera stream started successfully.");
+        // Client cleanup task
+        let clients_cleanup = self.clients.clone();
+        tokio::spawn(async move {
+            loop {
+                sleep(Duration::from_secs(30)).await;
+
+                if let Ok(mut clients_map) = clients_cleanup.lock() {
+                    let now = Instant::now();
+                    clients_map.retain(|addr, last_seen| {
+                        let keep = now.duration_since(*last_seen) < Duration::from_secs(60);
+                        if !keep {
+                            info!("Removing inactive client: {addr}");
+                        }
+                        keep
+                    });
+                }
+            }
+        });
+
         Ok(())
     }
 
-    pub fn get_stream_receiver(&self) -> broadcast::Receiver<Vec<u8>> {
-        self.stream_tx.subscribe()
+    async fn start_frame_broadcaster(&self) -> Result<()> {
+        let socket = self.socket.clone();
+        let clients = self.clients.clone();
+        let frame_buffer = self.frame_buffer.clone();
+
+        tokio::spawn(async move {
+            let mut frame_id = 0u32;
+
+            loop {
+                // Check if we have a frame to send
+                let frame_data = {
+                    if let Ok(buffer) = frame_buffer.lock() {
+                        buffer.clone()
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(frame) = frame_data {
+                    // Get current clients
+                    let client_addrs: Vec<SocketAddr> = {
+                        if let Ok(clients_map) = clients.lock() {
+                            clients_map.keys().cloned().collect()
+                        } else {
+                            Vec::new()
+                        }
+                    };
+
+                    if !client_addrs.is_empty() {
+                        // Send frame to all clients using chunked protocol
+                        Self::send_chunked_frame(&socket, &client_addrs, &frame, frame_id).await;
+                        frame_id = frame_id.wrapping_add(1);
+                    }
+                }
+
+                // Send frames at ~30fps
+                sleep(Duration::from_millis(33)).await;
+            }
+        });
+
+        Ok(())
     }
 
-    pub async fn stop(&mut self) -> Result<()> {
-        if let Some(mut process) = self.camera_process.take() {
-            info!("Stopping camera stream...");
-            process
-                .kill()
-                .await
-                .context("Failed to kill camera process")?;
+    async fn send_chunked_frame(
+        socket: &UdpSocket,
+        clients: &[SocketAddr],
+        frame: &[u8],
+        frame_id: u32,
+    ) {
+        const MAX_CHUNK_SIZE: usize = 1400; // Safe UDP payload size
+        const HEADER_SIZE: usize = 10; // frame_id(4) + chunk_id(2) + total_chunks(2) + data_len(2)
+        const DATA_SIZE: usize = MAX_CHUNK_SIZE - HEADER_SIZE;
 
-            match time::timeout(time::Duration::from_secs(5), process.wait()).await {
-                Ok(Ok(status)) => info!("Camera process exited with status: {status}"),
-                Ok(Err(e)) => error!("Error waiting for camera process: {e}"),
-                Err(_) => {
-                    error!("Camera process didn't exit within timeout, force killing");
-                    let _ = process.kill().await;
+        let total_chunks = frame.len().div_ceil(DATA_SIZE);
+
+        if total_chunks > u16::MAX as usize {
+            error!("Frame too large to send: {} bytes", frame.len());
+            return;
+        }
+
+        for chunk_id in 0..total_chunks {
+            let start = chunk_id * DATA_SIZE;
+            let end = std::cmp::min(start + DATA_SIZE, frame.len());
+            let chunk_data = &frame[start..end];
+
+            // Create packet: [frame_id:4][chunk_id:2][total_chunks:2][data_len:2][data...]
+            let mut packet = Vec::with_capacity(HEADER_SIZE + chunk_data.len());
+            packet.extend_from_slice(&frame_id.to_be_bytes());
+            packet.extend_from_slice(&(chunk_id as u16).to_be_bytes());
+            packet.extend_from_slice(&(total_chunks as u16).to_be_bytes());
+            packet.extend_from_slice(&(chunk_data.len() as u16).to_be_bytes());
+            packet.extend_from_slice(chunk_data);
+
+            // Send to all clients
+            for &client_addr in clients {
+                if let Err(e) = socket.send_to(&packet, client_addr).await {
+                    error!("Failed to send chunk {chunk_id} to {client_addr}: {e}");
                 }
             }
         }
-        Ok(())
     }
-}
 
-impl Drop for CameraHandler {
-    fn drop(&mut self) {
-        if let Some(mut process) = self.camera_process.take() {
-            tokio::spawn(async move {
-                let _ = process.kill().await;
-            });
-        }
+    pub async fn stop(&mut self) -> Result<()> {
+        info!("Stopping UDP streamer...");
+        // UDP streamer doesn't manage camera processes directly
+        // Camera capture is handled in a separate spawned task
+        Ok(())
     }
 }

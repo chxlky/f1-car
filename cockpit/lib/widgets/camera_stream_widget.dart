@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cockpit/services/camera_stream_service.dart';
 import 'package:cockpit/utils/app_colors.dart';
+import 'package:cockpit/services/udp_camera_service.dart';
 
 class CameraStreamWidget extends StatefulWidget {
   final String? carIpAddress;
@@ -34,18 +34,18 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
   void _connectToCamera() {
     if (widget.carIpAddress == null) return;
 
-    final cameraService = context.read<CameraStreamService>();
+    final cameraService = context.read<UdpCameraService>();
     cameraService.connect(widget.carIpAddress!);
   }
 
   void _disconnectCamera() {
-    final cameraService = context.read<CameraStreamService>();
+    final cameraService = context.read<UdpCameraService>();
     cameraService.disconnect();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CameraStreamService>(
+    return Consumer<UdpCameraService>(
       builder: (context, cameraService, child) {
         return Container(
           decoration: BoxDecoration(
@@ -70,7 +70,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     );
   }
 
-  Widget _buildHeader(CameraStreamService cameraService) {
+  Widget _buildHeader(UdpCameraService cameraService) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
@@ -82,9 +82,9 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
       ),
       child: Row(
         children: [
-          Icon(Icons.videocam, color: AppColors.white, size: 20),
+          const Icon(Icons.videocam, color: AppColors.white, size: 20),
           const SizedBox(width: 8),
-          Text(
+          const Text(
             'Camera Stream',
             style: TextStyle(
               color: AppColors.white,
@@ -99,7 +99,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     );
   }
 
-  Widget _buildConnectionButton(CameraStreamService cameraService) {
+  Widget _buildConnectionButton(UdpCameraService cameraService) {
     switch (cameraService.connectionState) {
       case CameraConnectionState.disconnected:
         return ElevatedButton.icon(
@@ -155,7 +155,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     }
   }
 
-  Widget _buildCameraView(CameraStreamService cameraService) {
+  Widget _buildCameraView(UdpCameraService cameraService) {
     switch (cameraService.connectionState) {
       case CameraConnectionState.disconnected:
         return _buildPlaceholder(
@@ -228,12 +228,12 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     );
   }
 
-  Widget _buildVideoStream(CameraStreamService cameraService) {
+  Widget _buildVideoStream(UdpCameraService cameraService) {
     return StreamBuilder<Uint8List>(
       stream: cameraService.frameStream,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return Container(
+          return SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: ClipRRect(
@@ -241,7 +241,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
               child: Image.memory(
                 snapshot.data!,
                 fit: BoxFit.cover,
-                gaplessPlayback: true, // Smooth frame transitions
+                gaplessPlayback: true,
                 errorBuilder: (context, error, stackTrace) {
                   return _buildPlaceholder(
                     icon: Icons.broken_image,
@@ -253,8 +253,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
             ),
           );
         } else if (cameraService.latestFrame != null) {
-          // Show latest frame while waiting for new ones
-          return Container(
+          return SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: ClipRRect(
@@ -277,7 +276,7 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     );
   }
 
-  Widget _buildFooter(CameraStreamService cameraService) {
+  Widget _buildFooter(UdpCameraService cameraService) {
     if (cameraService.connectionState != CameraConnectionState.connected) {
       return const SizedBox.shrink();
     }
@@ -291,17 +290,22 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
           bottomRight: Radius.circular(10),
         ),
       ),
-      child: Row(
+      child: const Row(
         children: [
           Icon(Icons.fiber_manual_record, color: Colors.red, size: 12),
-          const SizedBox(width: 4),
-          const Text(
+          SizedBox(width: 4),
+          Text(
             'LIVE',
             style: TextStyle(
               color: Colors.red,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
+          ),
+          Spacer(),
+          Text(
+            'Streaming',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
