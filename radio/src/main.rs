@@ -1,8 +1,10 @@
 use log::{LevelFilter, error, info};
 
+mod camera;
 mod config;
 mod discovery;
 mod server;
+mod streaming;
 
 use server::RadioServer;
 

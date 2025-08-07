@@ -8,7 +8,10 @@ use tokio::{
     time::timeout,
 };
 
-use crate::{config::ConfigManager, discovery::DiscoveryService};
+use crate::{
+    camera::CameraHandler, config::ConfigManager, discovery::DiscoveryService,
+    streaming::CameraStreamer,
+};
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(tag = "type")]
@@ -39,6 +42,7 @@ pub struct RadioServer {
     config_manager: Arc<Mutex<ConfigManager>>,
     discovery_service: Arc<Mutex<DiscoveryService>>,
     connected_client: Arc<Mutex<Option<SocketAddr>>>,
+    camera_streamer: Arc<Mutex<CameraStreamer>>,
 }
 
 impl RadioServer {
@@ -48,12 +52,15 @@ impl RadioServer {
         let discovery_service =
             Arc::new(Mutex::new(DiscoveryService::new(config_manager.clone())?));
         let connected_client = Arc::new(Mutex::new(None));
+        let camera_handler = Arc::new(Mutex::new(CameraHandler::new()));
+        let camera_streamer = Arc::new(Mutex::new(CameraStreamer::new(camera_handler)));
 
         Ok(Self {
             control_tx,
             config_manager,
             discovery_service,
             connected_client,
+            camera_streamer,
         })
     }
 
@@ -82,11 +89,16 @@ impl RadioServer {
     ) -> Result<()> {
         match message {
             ClientMessage::Control(control_msg) => {
-                // Forward control message to UART/STM32
-                /* if let Err(e) = self.control_tx.send(control_msg) {
-                    error!("Failed to send control message: {e}");
+                // Broadcast control message to all subscribers (including UART/STM32 handler)
+                /* if let Err(e) = self.control_tx.send(control_msg.clone()) {
+                    error!("Failed to broadcast control message: {e}");
                 } */
                 debug!("Received control message: {control_msg:?}");
+
+                // Broadcast control message to any subscribers (like UART handler)
+                if let Err(e) = self.control_tx.send(control_msg) {
+                    error!("Failed to broadcast control message: {e}");
+                }
             }
             ClientMessage::ConfigUpdate { config } => {
                 info!(
@@ -185,6 +197,18 @@ impl RadioServer {
             "Car configuration: #{} {} ({})",
             car_config.number, car_config.driver_name, car_config.team_name
         );
+
+        // Start camera streamer (but not the camera itself - that starts on-demand)
+        let streamer = self.camera_streamer.clone();
+        tokio::spawn(async move {
+            let mut streamer = streamer.lock().await;
+            if let Err(e) = streamer.start_udp_stream(8082).await {
+                error!("UDP camera streaming error: {e}");
+            }
+        });
+
+        info!("Camera streaming service ready on port 8082");
+        info!("Camera will start automatically when Flutter app subscribes");
 
         {
             let mut discovery_service = self.discovery_service.lock().await;

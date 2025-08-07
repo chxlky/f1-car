@@ -115,6 +115,7 @@
             protoc-gen-prost
             just
             google-chrome
+            ffmpeg_6
           ]
           ++ flutterBuildInputs ++ flutterNativeBuildInputs;
       in {

@@ -7,6 +7,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import 'package:cockpit/widgets/app_bar.dart';
 import 'package:cockpit/services/f1_discovery_service.dart';
+import 'package:cockpit/services/camera_stream_service.dart';
 
 void main() {
   runApp(const F1App());
@@ -20,6 +21,7 @@ class F1App extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => F1DiscoveryService()),
+        ChangeNotifierProvider(create: (context) => CameraStreamService()),
       ],
       child: MaterialApp(
         title: 'Cockpit',

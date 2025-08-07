@@ -3,6 +3,7 @@ import 'package:cockpit/services/udp_radio_service.dart';
 import 'package:cockpit/models/radio_connection_state.dart';
 import 'package:cockpit/models/server_message.dart';
 import 'package:cockpit/utils/app_colors.dart';
+import 'package:cockpit/widgets/camera_stream_widget.dart';
 import 'package:flutter/material.dart';
 
 class RadioCommunicationPage extends StatefulWidget {
@@ -312,6 +313,15 @@ class _RadioCommunicationPageState extends State<RadioCommunicationPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildCarInfo(),
+            const SizedBox(height: 16),
+            // Camera Stream Widget
+            SizedBox(
+              height: 240, // Fixed height for camera
+              child: CameraStreamWidget(
+                carIpAddress: widget.car.ipAddress,
+                autoConnect: true, // Auto-connect when radio connects
+              ),
+            ),
             const SizedBox(height: 16),
             _buildControlPanel(),
             const SizedBox(height: 16),
