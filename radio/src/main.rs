@@ -15,11 +15,11 @@ async fn main() {
 
     info!("Starting F1 Car Radio with UDP Camera Streaming...");
 
-    // Start UDP camera streamer
+    // Start UDP camera streamer (camera will start on demand)
     tokio::spawn(async move {
         match UdpStreamer::new().await {
             Ok(mut streamer) => {
-                info!("UDP camera streamer started");
+                info!("UDP camera streamer initialized");
                 if let Err(e) = streamer.start().await {
                     error!("Failed to start UDP streamer: {e}");
                 }

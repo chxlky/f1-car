@@ -20,6 +20,7 @@ class UdpCameraService extends ChangeNotifier {
   Uint8List? _latestFrame;
   int _frameCount = 0;
   bool _disposed = false;
+  bool _cameraStreaming = false;
 
   // Debugging counters
   int _packetsReceived = 0;
@@ -40,6 +41,7 @@ class UdpCameraService extends ChangeNotifier {
   int get port => _port;
   int get packetsReceived => _packetsReceived;
   int get discoveryResponsesReceived => _discoveryResponsesReceived;
+  bool get isCameraStreaming => _cameraStreaming;
 
   /// Stream of complete JPEG frames
   Stream<Uint8List> get frameStream =>
@@ -74,10 +76,49 @@ class UdpCameraService extends ChangeNotifier {
     }
   }
 
+  /// Start camera streaming
+  Future<bool> startCamera() async {
+    if (_socket == null || _state != CameraConnectionState.connected) {
+      debugPrint('Cannot start camera: not connected');
+      return false;
+    }
+
+    try {
+      // Send start camera message
+      final startMessage = 'START_CAMERA'.codeUnits;
+      _socket!.send(startMessage, InternetAddress(_host), _port);
+      debugPrint('Sent START_CAMERA command to $_host:$_port');
+      return true;
+    } catch (e) {
+      debugPrint('Failed to send start camera command: $e');
+      return false;
+    }
+  }
+
+  /// Stop camera streaming
+  Future<bool> stopCamera() async {
+    if (_socket == null || _state != CameraConnectionState.connected) {
+      debugPrint('Cannot stop camera: not connected');
+      return false;
+    }
+
+    try {
+      // Send stop camera message
+      final stopMessage = 'STOP_CAMERA'.codeUnits;
+      _socket!.send(stopMessage, InternetAddress(_host), _port);
+      debugPrint('Sent STOP_CAMERA command to $_host:$_port');
+      return true;
+    } catch (e) {
+      debugPrint('Failed to send stop camera command: $e');
+      return false;
+    }
+  }
+
   /// Disconnect from UDP camera server
   Future<void> disconnect() async {
     _setState(CameraConnectionState.disconnected);
     _clearError();
+    _cameraStreaming = false; // Reset camera streaming state
 
     _discoveryTimer?.cancel();
     _keepAliveTimer?.cancel();
@@ -147,14 +188,11 @@ class UdpCameraService extends ChangeNotifier {
       'Received UDP packet: ${data.length} bytes (total packets: $_packetsReceived)',
     );
 
-    if (data.length < 10) {
-      debugPrint('Packet too small: ${data.length} bytes');
-      return;
-    }
+    // Check for text responses first
+    final message = String.fromCharCodes(data);
 
     // Check if this is a discovery response
-    if (data.length >= 13 &&
-        String.fromCharCodes(data.take(13)) == 'CAMERA_SERVER') {
+    if (message.startsWith('CAMERA_SERVER')) {
       _discoveryResponsesReceived++;
       debugPrint(
         'Received discovery response from camera server (total: $_discoveryResponsesReceived)',
@@ -162,9 +200,65 @@ class UdpCameraService extends ChangeNotifier {
       return;
     }
 
-    // Parse chunked frame packet: [frame_id:4][chunk_id:2][total_chunks:2][data_len:2][data...]
-    if (data.length < 10) return;
+    // Check for camera control responses
+    if (message.startsWith('CAMERA_STARTED')) {
+      debugPrint('Camera streaming started successfully');
+      _cameraStreaming = true;
+      if (!_disposed) {
+        notifyListeners();
+      }
+      return;
+    }
 
+    if (message.startsWith('CAMERA_STOPPED')) {
+      debugPrint('Camera streaming stopped successfully');
+      _cameraStreaming = false;
+      if (!_disposed) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (message.startsWith('CAMERA_START_FAILED')) {
+      debugPrint('Camera start failed');
+      _cameraStreaming = false;
+      if (!_disposed) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (message.startsWith('CAMERA_STOP_FAILED')) {
+      debugPrint('Camera stop failed');
+      // Keep current state since stop failed
+      return;
+    }
+
+    if (message.startsWith('CAMERA_ALREADY_RUNNING')) {
+      debugPrint('Camera is already running');
+      _cameraStreaming = true;
+      if (!_disposed) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (message.startsWith('CAMERA_ALREADY_STOPPED')) {
+      debugPrint('Camera is already stopped');
+      _cameraStreaming = false;
+      if (!_disposed) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    // If we get here, it should be frame data
+    if (data.length < 10) {
+      debugPrint('Packet too small for frame data: ${data.length} bytes');
+      return;
+    }
+
+    // Parse chunked frame packet: [frame_id:4][chunk_id:2][total_chunks:2][data_len:2][data...]
     final frameId = _bytesToInt32(data, 0);
     final chunkId = _bytesToInt16(data, 4);
     final totalChunks = _bytesToInt16(data, 6);

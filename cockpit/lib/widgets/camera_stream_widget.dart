@@ -31,16 +31,138 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     }
   }
 
+  @override
+  void dispose() {
+    // Automatically disconnect when the widget is disposed (user goes back)
+    final cameraService = context.read<UdpCameraService>();
+    if (cameraService.connectionState == CameraConnectionState.connected) {
+      cameraService.stopCamera().then((_) {
+        cameraService.disconnect();
+      });
+    }
+    super.dispose();
+  }
+
   void _connectToCamera() {
     if (widget.carIpAddress == null) return;
 
     final cameraService = context.read<UdpCameraService>();
-    cameraService.connect(widget.carIpAddress!);
+    cameraService.connect(widget.carIpAddress!).then((success) {
+      if (success) {
+        // Don't auto-start camera streaming anymore
+        // Let the user explicitly start it
+        debugPrint('Connected to camera server - camera ready to start');
+      }
+    });
   }
 
-  void _disconnectCamera() {
+  void _startCameraStreaming() {
     final cameraService = context.read<UdpCameraService>();
-    cameraService.disconnect();
+    cameraService.startCamera();
+  }
+
+  void _stopCameraStreaming() {
+    final cameraService = context.read<UdpCameraService>();
+    cameraService.stopCamera();
+  }
+
+  Widget _buildHeader(UdpCameraService cameraService) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        color: AppColors.f1Red,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.videocam, color: AppColors.white, size: 20),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Camera Stream',
+              style: TextStyle(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          _buildMainButton(cameraService),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainButton(UdpCameraService cameraService) {
+    switch (cameraService.connectionState) {
+      case CameraConnectionState.disconnected:
+        return ElevatedButton.icon(
+          onPressed: widget.carIpAddress != null ? _connectToCamera : null,
+          icon: const Icon(Icons.wifi, size: 16),
+          label: const Text('Connect'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(90, 32),
+          ),
+        );
+
+      case CameraConnectionState.connecting:
+        return const SizedBox(
+          width: 90,
+          height: 32,
+          child: Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ),
+        );
+
+      case CameraConnectionState.connected:
+        if (cameraService.isCameraStreaming) {
+          return ElevatedButton.icon(
+            onPressed: _stopCameraStreaming,
+            icon: const Icon(Icons.stop, size: 16),
+            label: const Text('Stop'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(90, 32),
+            ),
+          );
+        } else {
+          return ElevatedButton.icon(
+            onPressed: _startCameraStreaming,
+            icon: const Icon(Icons.play_arrow, size: 16),
+            label: const Text('Start'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(90, 32),
+            ),
+          );
+        }
+
+      case CameraConnectionState.error:
+        return ElevatedButton.icon(
+          onPressed: widget.carIpAddress != null ? _connectToCamera : null,
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('Retry'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(90, 32),
+          ),
+        );
+    }
   }
 
   @override
@@ -70,91 +192,6 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
     );
   }
 
-  Widget _buildHeader(UdpCameraService cameraService) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: AppColors.f1Red,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.videocam, color: AppColors.white, size: 20),
-          const SizedBox(width: 8),
-          const Text(
-            'Camera Stream',
-            style: TextStyle(
-              color: AppColors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          const Spacer(),
-          _buildConnectionButton(cameraService),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConnectionButton(UdpCameraService cameraService) {
-    switch (cameraService.connectionState) {
-      case CameraConnectionState.disconnected:
-        return ElevatedButton.icon(
-          onPressed: widget.carIpAddress != null ? _connectToCamera : null,
-          icon: const Icon(Icons.play_arrow, size: 16),
-          label: const Text('Connect'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(80, 32),
-          ),
-        );
-
-      case CameraConnectionState.connecting:
-        return const SizedBox(
-          width: 80,
-          height: 32,
-          child: Center(
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-          ),
-        );
-
-      case CameraConnectionState.connected:
-        return ElevatedButton.icon(
-          onPressed: _disconnectCamera,
-          icon: const Icon(Icons.stop, size: 16),
-          label: const Text('Stop'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(80, 32),
-          ),
-        );
-
-      case CameraConnectionState.error:
-        return ElevatedButton.icon(
-          onPressed: widget.carIpAddress != null ? _connectToCamera : null,
-          icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Retry'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(80, 32),
-          ),
-        );
-    }
-  }
-
   Widget _buildCameraView(UdpCameraService cameraService) {
     switch (cameraService.connectionState) {
       case CameraConnectionState.disconnected:
@@ -173,6 +210,12 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
         );
 
       case CameraConnectionState.connected:
+        if (!cameraService.isCameraStreaming) {
+          return _buildPlaceholder(
+            icon: Icons.videocam,
+            text: 'Camera connected. Tap Start to begin streaming.',
+          );
+        }
         return _buildVideoStream(cameraService);
 
       case CameraConnectionState.error:
@@ -229,6 +272,13 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
   }
 
   Widget _buildVideoStream(UdpCameraService cameraService) {
+    if (!cameraService.isCameraStreaming) {
+      return _buildPlaceholder(
+        icon: Icons.videocam,
+        text: 'Camera ready. Tap Start to begin streaming.',
+      );
+    }
+
     return StreamBuilder<Uint8List>(
       stream: cameraService.frameStream,
       builder: (context, snapshot) {
@@ -290,22 +340,28 @@ class _CameraStreamWidgetState extends State<CameraStreamWidget> {
           bottomRight: Radius.circular(10),
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.fiber_manual_record, color: Colors.red, size: 12),
-          SizedBox(width: 4),
+          Icon(
+            cameraService.isCameraStreaming
+                ? Icons.fiber_manual_record
+                : Icons.radio_button_unchecked,
+            color: cameraService.isCameraStreaming ? Colors.red : Colors.grey,
+            size: 12,
+          ),
+          const SizedBox(width: 4),
           Text(
-            'LIVE',
+            cameraService.isCameraStreaming ? 'LIVE' : 'READY',
             style: TextStyle(
-              color: Colors.red,
+              color: cameraService.isCameraStreaming ? Colors.red : Colors.grey,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
           ),
-          Spacer(),
+          const Spacer(),
           Text(
-            'Streaming',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+            cameraService.isCameraStreaming ? 'Streaming' : 'Stopped',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),

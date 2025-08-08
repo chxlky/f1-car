@@ -14,7 +14,7 @@ pub struct UdpStreamer {
     socket: Arc<UdpSocket>,
     clients: Arc<Mutex<HashMap<SocketAddr, Instant>>>,
     frame_buffer: FrameBuffer,
-    camera_capture: Option<CameraCapture>,
+    camera_capture: CameraCapture,
 }
 
 impl UdpStreamer {
@@ -25,28 +25,27 @@ impl UdpStreamer {
         let frame_buffer = Arc::new(Mutex::new(None));
         let camera_capture = CameraCapture::new(frame_buffer.clone());
 
-        Ok(Self {
+        let streamer = Self {
             socket: Arc::new(socket),
             clients: Arc::new(Mutex::new(HashMap::new())),
             frame_buffer,
-            camera_capture: Some(camera_capture),
-        })
+            camera_capture,
+        };
+
+        Ok(streamer)
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        if let Some(camera) = &self.camera_capture {
-            camera.start().await?;
-        }
-
         self.start_client_discovery().await?;
         self.start_frame_broadcaster().await?;
-
+        info!("UDP streamer started (camera will start on demand)");
         Ok(())
     }
 
     async fn start_client_discovery(&self) -> Result<()> {
         let socket = self.socket.clone();
         let clients = self.clients.clone();
+        let camera_capture = self.camera_capture.clone();
 
         tokio::spawn(async move {
             let mut buffer = [0u8; 1024];
@@ -56,16 +55,57 @@ impl UdpStreamer {
                     Ok((len, addr)) => {
                         let message = String::from_utf8_lossy(&buffer[..len]);
 
-                        if message == "DISCOVER" {
-                            info!("New client discovered: {addr}");
+                        match message.as_ref() {
+                            "DISCOVER" => {
+                                info!("New client discovered: {addr}");
 
-                            if let Ok(mut clients_map) = clients.lock() {
-                                clients_map.insert(addr, Instant::now());
+                                if let Ok(mut clients_map) = clients.lock() {
+                                    clients_map.insert(addr, Instant::now());
+                                }
+
+                                // Send discovery response
+                                if let Err(e) = socket.send_to(b"CAMERA_SERVER", addr).await {
+                                    error!("Failed to send discovery response to {addr}: {e}");
+                                }
                             }
+                            "START_CAMERA" => {
+                                info!("Camera start requested by client: {addr}");
+                                
+                                if let Ok(mut clients_map) = clients.lock() {
+                                    clients_map.insert(addr, Instant::now());
+                                }
 
-                            // Send discovery response
-                            if let Err(e) = socket.send_to(b"CAMERA_SERVER", addr).await {
-                                error!("Failed to send discovery response to {addr}: {e}");
+                                match camera_capture.start().await {
+                                    Ok(_) => {
+                                        info!("Camera started successfully");
+                                        let _ = socket.send_to(b"CAMERA_STARTED", addr).await;
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to start camera: {e}");
+                                        let _ = socket.send_to(b"CAMERA_START_FAILED", addr).await;
+                                    }
+                                }
+                            }
+                            "STOP_CAMERA" => {
+                                info!("Camera stop requested by client: {addr}");
+                                
+                                if let Ok(mut clients_map) = clients.lock() {
+                                    clients_map.insert(addr, Instant::now());
+                                }
+
+                                match camera_capture.stop().await {
+                                    Ok(_) => {
+                                        info!("Camera stopped successfully");
+                                        let _ = socket.send_to(b"CAMERA_STOPPED", addr).await;
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to stop camera: {e}");
+                                        let _ = socket.send_to(b"CAMERA_STOP_FAILED", addr).await;
+                                    }
+                                }
+                            }
+                            _ => {
+                                // Unknown message, ignore
                             }
                         }
                     }
@@ -76,6 +116,7 @@ impl UdpStreamer {
             }
         });
 
+        // Client cleanup task
         let clients_cleanup = self.clients.clone();
         tokio::spawn(async move {
             loop {
@@ -176,12 +217,5 @@ impl UdpStreamer {
                 }
             }
         }
-    }
-
-    pub async fn stop(&mut self) -> Result<()> {
-        info!("Stopping UDP streamer...");
-        // UDP streamer doesn't manage camera processes directly
-        // Camera capture is handled in a separate spawned task
-        Ok(())
     }
 }

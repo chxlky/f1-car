@@ -87,11 +87,6 @@ impl RadioServer {
                     error!("Failed to broadcast control message: {e}");
                 } */
                 debug!("Received control message: {control_msg:?}");
-
-                // Broadcast control message to any subscribers (like UART handler)
-                if let Err(e) = self.control_tx.send(control_msg) {
-                    error!("Failed to broadcast control message: {e}");
-                }
             }
             ClientMessage::ConfigUpdate { config } => {
                 info!(
