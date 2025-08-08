@@ -2,20 +2,19 @@ use anyhow::Result;
 use log::{error, info};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::{
-    io::{AsyncReadExt, BufReader},
-    net::UdpSocket,
-    process,
-    time::sleep,
-};
+use tokio::{net::UdpSocket, time::sleep};
+
+use super::CameraCapture;
+
+type FrameBuffer = Arc<Mutex<Option<Vec<u8>>>>;
 
 pub struct UdpStreamer {
     socket: Arc<UdpSocket>,
     clients: Arc<Mutex<HashMap<SocketAddr, Instant>>>,
-    frame_buffer: Arc<Mutex<Option<Vec<u8>>>>,
+    frame_buffer: FrameBuffer,
+    camera_capture: Option<CameraCapture>,
 }
 
 impl UdpStreamer {
@@ -23,119 +22,24 @@ impl UdpStreamer {
         let socket = UdpSocket::bind("0.0.0.0:8081").await?;
         info!("UDP streamer listening on 0.0.0.0:8081");
 
+        let frame_buffer = Arc::new(Mutex::new(None));
+        let camera_capture = CameraCapture::new(frame_buffer.clone());
+
         Ok(Self {
             socket: Arc::new(socket),
             clients: Arc::new(Mutex::new(HashMap::new())),
-            frame_buffer: Arc::new(Mutex::new(None)),
+            frame_buffer,
+            camera_capture: Some(camera_capture),
         })
     }
 
-    fn find_jpeg_start(buffer: &[u8]) -> Option<usize> {
-        buffer.windows(2).position(|w| w == [0xFF, 0xD8])
-    }
-
-    fn find_jpeg_end(buffer: &[u8]) -> Option<usize> {
-        buffer.windows(2).position(|w| w == [0xFF, 0xD9])
-    }
-
     pub async fn start(&mut self) -> Result<()> {
-        // Start camera capture
-        self.start_camera_capture().await?;
+        if let Some(camera) = &self.camera_capture {
+            camera.start().await?;
+        }
 
-        // Start client discovery
         self.start_client_discovery().await?;
-
-        // Start frame broadcasting
         self.start_frame_broadcaster().await?;
-
-        Ok(())
-    }
-
-    async fn start_camera_capture(&mut self) -> Result<()> {
-        info!("Starting camera capture with rpicam-vid MJPEG...");
-
-        let frame_buffer = self.frame_buffer.clone();
-
-        tokio::spawn(async move {
-            let mut frame_counter = 0u32;
-
-            loop {
-                let mut child = match process::Command::new("rpicam-vid")
-                    .args([
-                        "-t",
-                        "0",
-                        "--width",
-                        "1600",
-                        "--height",
-                        "900",
-                        "--framerate",
-                        "30",
-                        "--codec",
-                        "mjpeg",
-                        "--hflip",
-                        "--vflip",
-                        "--nopreview",
-                        "-o",
-                        "-",
-                    ])
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::null()) // Suppress error output
-                    .spawn()
-                {
-                    Ok(child) => child,
-                    Err(e) => {
-                        error!("Failed to start rpicam-vid: {e}");
-                        sleep(Duration::from_secs(5)).await;
-                        continue;
-                    }
-                };
-
-                let stdout = child.stdout.take().expect("Failed to capture stdout");
-                let mut reader = BufReader::new(stdout);
-                let mut buffer = Vec::new();
-                let mut temp_buf = [0u8; 8192];
-
-                loop {
-                    match reader.read(&mut temp_buf).await {
-                        Ok(0) => break, // EOF
-                        Ok(n) => {
-                            buffer.extend_from_slice(&temp_buf[..n]);
-
-                            // Look for complete JPEG frames
-                            while let Some(start) = Self::find_jpeg_start(&buffer) {
-                                if let Some(end) = Self::find_jpeg_end(&buffer[start..]) {
-                                    let frame_end = start + end + 2;
-                                    let frame = buffer[start..frame_end].to_vec();
-                                    buffer.drain(..frame_end);
-
-                                    // Update the global frame buffer
-                                    if let Ok(mut current_frame) = frame_buffer.lock() {
-                                        *current_frame = Some(frame);
-                                        frame_counter += 1;
-
-                                        if frame_counter % 100 == 0 {
-                                            info!("Captured {frame_counter} frames");
-                                        }
-                                    }
-                                } else {
-                                    break; // Wait for more data
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            error!("Error reading from camera: {e}");
-                            break;
-                        }
-                    }
-                }
-
-                let _ = child.kill().await;
-                let _ = child.wait().await;
-
-                // Restart after a brief delay
-                sleep(Duration::from_millis(100)).await;
-            }
-        });
 
         Ok(())
     }
@@ -155,7 +59,6 @@ impl UdpStreamer {
                         if message == "DISCOVER" {
                             info!("New client discovered: {addr}");
 
-                            // Add client to our list
                             if let Ok(mut clients_map) = clients.lock() {
                                 clients_map.insert(addr, Instant::now());
                             }
@@ -173,7 +76,6 @@ impl UdpStreamer {
             }
         });
 
-        // Client cleanup task
         let clients_cleanup = self.clients.clone();
         tokio::spawn(async move {
             loop {
@@ -268,7 +170,6 @@ impl UdpStreamer {
             packet.extend_from_slice(&(chunk_data.len() as u16).to_be_bytes());
             packet.extend_from_slice(chunk_data);
 
-            // Send to all clients
             for &client_addr in clients {
                 if let Err(e) = socket.send_to(&packet, client_addr).await {
                     error!("Failed to send chunk {chunk_id} to {client_addr}: {e}");

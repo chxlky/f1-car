@@ -5,8 +5,7 @@ mod config;
 mod discovery;
 mod server;
 
-use camera::UdpStreamer;
-use server::RadioServer;
+use crate::{camera::UdpStreamer, server::RadioServer};
 
 #[tokio::main]
 async fn main() {
