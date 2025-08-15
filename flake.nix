@@ -35,7 +35,7 @@
           platformToolsVersion = "35.0.2";
           buildToolsVersions = [buildToolsVersions];
           platformVersions = ["23" "29" "30" "31" "32" "33" "34" "35" "28"];
-          abiVersions = ["armeabi-v7a" "arm64-v8a"];
+          abiVersions = ["armeabi-v7a" "arm64-v8a" "x86" "x86_64"];
           cmakeVersions = [cmakeVersion];
           ndkVersions = [ndkVersion];
           includeNDK = true;
@@ -53,6 +53,10 @@
           targets = [
             "aarch64-unknown-linux-musl" # Raspberry Pi 4B
             "thumbv7em-none-eabihf" # STM32F4
+            "aarch64-linux-android"
+            "armv7-linux-androideabi"
+            "x86_64-linux-android"
+            "i686-linux-android"
           ];
         };
 
@@ -61,39 +65,35 @@
           rustc = rustToolchain;
         };
 
-        flutterBuildInputs = with pkgs; [
-          xorg.libXcursor
-          xorg.libXi
-          xorg.libXrandr
-          udev
-          alsa-lib
-          libxkbcommon
-          zlib
-          jdk17
-          androidSdk
-          flutter
-          libayatana-appindicator
-          gtk3
-          wayland
+        tauriBuildInputs = with pkgs; [
           openssl
-          openssl.dev
+          gobject-introspection
+          at-spi2-atk
+          atkmm
+          cairo
+          gdk-pixbuf
+          glib
+          glib-networking
+          gtk3
+          harfbuzz
+          librsvg
+          libsoup_3
+          pango
+          webkitgtk_4_1
+          libayatana-appindicator
+          pipewire
+          libjack2
+          libusb1
+          stdenv.cc.cc.lib
         ];
 
-        flutterNativeBuildInputs = with pkgs; [
-          libsigcxx
-          stdenv.cc
-          gnumake
-          binutils
-          ncurses5
-          libGLU
-          libGL
+        tauriNativeBuildInputs = with pkgs; [
           pkg-config
-          gcc-unwrapped
-          clang
-          ninja
-          llvmPackages.libclang
-          glibc_multi
-          lld
+          rustToolchain
+          nodejs
+          bun
+          jdk17
+          androidSdk
         ];
 
         devPackages = with pkgs;
@@ -103,7 +103,6 @@
             openssl
             probe-rs-tools
             cargo-binutils
-            cargo-expand
             llvm
             gdb
             elfutils
@@ -111,13 +110,10 @@
             gcc-arm-embedded
             flip-link
             nixpkgs-fmt
-            cmake
-            protoc-gen-prost
             just
-            google-chrome
             ffmpeg_6
           ]
-          ++ flutterBuildInputs ++ flutterNativeBuildInputs;
+          ++ tauriBuildInputs ++ tauriNativeBuildInputs;
       in {
         devShells.default = pkgs.mkShell {
           packages =
@@ -146,16 +142,6 @@
             export ANDROID_SDK_ROOT="${androidSdk}/libexec/android-sdk"
             export ANDROID_HOME="$ANDROID_SDK_ROOT"
             export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk-bundle"
-            export FLUTTER_ROOT="${pkgs.flutter}"
-
-            # Gradle options for Android builds
-            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/${buildToolsVersions}/aapt2 -Dandroid.cmake.dir=$ANDROID_SDK_ROOT/cmake/${cmakeVersion}"
-
-            # Point Flutter to the Chrome executable
-            export CHROME_EXECUTABLE="${pkgs.google-chrome}/bin/google-chrome-stable"
-
-            # Ensure Flutter is in PATH
-            export PATH="$FLUTTER_ROOT/bin:$PATH"
           '';
         };
 
