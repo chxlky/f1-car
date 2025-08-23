@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use log::{debug, error, info, warn};
+use tokio_util::sync::CancellationToken;
 use std::{io::ErrorKind, net::SocketAddr, sync::Arc, time::Duration};
 use telemetry::{CarConfiguration, ControlMessage};
 use tokio::{
@@ -177,7 +178,7 @@ impl RadioServer {
         }
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self, cancel_token: CancellationToken) -> Result<()> {
         info!("Starting Radio Server...");
 
         let car_config = self.get_car_config().await;
@@ -205,64 +206,72 @@ impl RadioServer {
         let mut buffer = vec![0u8; 65507]; // Max UDP payload size
 
         loop {
-            match socket.recv_from(&mut buffer).await {
-                Ok((len, client_addr)) => {
-                    let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
-                    debug!("UDP message received from {client_addr}: {data_str}");
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    info!("Cancellation requested, breaking server loop");
+                    break;
+                }
+                result = socket.recv_from(&mut buffer) => {
+                    match result {
+                        Ok((len, client_addr)) => {
+                            let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
+                            debug!("UDP message received from {client_addr}: {data_str}");
 
-                    // Add client to connected list if not already present
-                    {
-                        let mut client = self.connected_client.lock().await;
-                        match *client {
-                            None => {
-                                *client = Some(client_addr);
-                                info!("Client connected: {client_addr}");
+                            // Add client to connected list if not already present
+                            {
+                                let mut client = self.connected_client.lock().await;
+                                match *client {
+                                    None => {
+                                        *client = Some(client_addr);
+                                        info!("Client connected: {client_addr}");
 
-                                self.send_initial_config(&socket, client_addr).await;
+                                        self.send_initial_config(&socket, client_addr).await;
+                                    }
+                                    Some(existing_addr) => {
+                                        if existing_addr != client_addr {
+                                            info!(
+                                                "Previous client {existing_addr} replaced by new client {client_addr}"
+                                            );
+                                            *client = Some(client_addr);
+
+                                            self.send_initial_config(&socket, client_addr).await;
+                                        }
+                                    }
+                                }
                             }
-                            Some(existing_addr) => {
-                                if existing_addr != client_addr {
-                                    info!(
-                                        "Previous client {existing_addr} replaced by new client {client_addr}"
-                                    );
-                                    *client = Some(client_addr);
 
-                                    self.send_initial_config(&socket, client_addr).await;
+                            // Parse and handle the message
+                            let message_str = match std::str::from_utf8(&buffer[..len]) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    error!("Invalid UTF-8 from {client_addr}: {e}");
+                                    continue;
+                                }
+                            };
+
+                            match serde_json::from_str::<ClientMessage>(message_str) {
+                                Ok(client_message) => {
+                                    if let Err(e) = self
+                                        .handle_client_message(client_message, client_addr, &socket)
+                                        .await
+                                    {
+                                        error!("Error handling message from {client_addr}: {e}");
+                                    }
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Failed to parse message from {client_addr}: {e} - Raw: {message_str}",
+                                    );
                                 }
                             }
                         }
-                    }
-
-                    // Parse and handle the message
-                    let message_str = match std::str::from_utf8(&buffer[..len]) {
-                        Ok(s) => s,
                         Err(e) => {
-                            error!("Invalid UTF-8 from {client_addr}: {e}");
-                            continue;
-                        }
-                    };
+                            error!("Error receiving UDP message: {e}");
 
-                    match serde_json::from_str::<ClientMessage>(message_str) {
-                        Ok(client_message) => {
-                            if let Err(e) = self
-                                .handle_client_message(client_message, client_addr, &socket)
-                                .await
-                            {
-                                error!("Error handling message from {client_addr}: {e}");
+                            if matches!(e.kind(), ErrorKind::AddrNotAvailable | ErrorKind::AddrInUse) {
+                                break;
                             }
                         }
-                        Err(e) => {
-                            error!(
-                                "Failed to parse message from {client_addr}: {e} - Raw: {message_str}",
-                            );
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!("Error receiving UDP message: {e}");
-
-                    if matches!(e.kind(), ErrorKind::AddrNotAvailable | ErrorKind::AddrInUse) {
-                        break;
                     }
                 }
             }
