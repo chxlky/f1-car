@@ -13,10 +13,11 @@
     "windows": [
       {
         "title": "cockpit",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
-        "fullscreen": false
+        "width": 450,
+        "height": 900,
+        "resizable": false,
+        "fullscreen": false,
+        "label": "main"
       }
     ],
     "security": {

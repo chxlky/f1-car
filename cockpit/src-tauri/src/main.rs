@@ -2,5 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    cockpit_lib::run();
+    if let Err(e) = cockpit_lib::run() {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }

@@ -7,11 +7,13 @@ use mdns_sd::{ServiceDaemon, ServiceInfo};
 use tokio::sync::Mutex;
 
 use crate::config::ConfigManager;
+use telemetry::F1Car;
 
 pub struct DiscoveryService {
     mdns: ServiceDaemon,
     service_info: Option<ServiceInfo>,
     config_manager: Arc<Mutex<ConfigManager>>,
+    pub service_car: Option<F1Car>,
 }
 
 impl DiscoveryService {
@@ -22,6 +24,7 @@ impl DiscoveryService {
             mdns,
             service_info: None,
             config_manager,
+            service_car: None,
         })
     }
 
@@ -40,8 +43,7 @@ impl DiscoveryService {
             self.service_info = None;
         }
 
-        let local_ip = local_ip()
-            .context("Failed to get local IP address")?;
+        let local_ip = local_ip().context("Failed to get local IP address")?;
         info!("Using Local IP: {local_ip}");
 
         let service_name = format!("car-{}", config.number);
@@ -82,7 +84,18 @@ impl DiscoveryService {
             .register(service_info.clone())
             .context("Failed to register mDNS service")?;
 
+        let car = F1Car {
+            id: format!("car-{}", config.number),
+            number: config.number as u32,
+            driver: config.driver_name.clone(),
+            team: config.team_name.clone(),
+            ip: local_ip.to_string(),
+            port,
+            version: version.clone(),
+        };
+
         self.service_info = Some(service_info);
+        self.service_car = Some(car);
         // Maybe sleep for a short duration to allow the service to register
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 

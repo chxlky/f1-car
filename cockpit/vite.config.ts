@@ -17,6 +17,9 @@ export default defineConfig({
                   host: host,
                   port: 5173
               }
-            : undefined
+            : undefined,
+        watch: {
+            ignored: ["**/src-tauri/**"]
+        }
     }
 });

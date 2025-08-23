@@ -11,7 +11,12 @@
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "format": "prettier --write .",
-        "lint": "prettier --check . && eslint ."
+        "lint": "prettier --check . && eslint .",
+        "gen-bindings": "cd src-tauri && cargo run --bin gen_bindings",
+        "tauri:android:dev": "bun gen-bindings && bun tauri android dev",
+        "tauri:android:build": "bun gen-bindings && bun tauri android build",
+        "tauri:dev": "bun gen-bindings && bun tauri dev",
+        "tauri:build": "bun gen-bindings && bun tauri build"
     },
     "devDependencies": {
         "@eslint/compat": "^1.2.5",
@@ -37,6 +42,8 @@
         "vite": "^7.0.4"
     },
     "dependencies": {
-        "@tauri-apps/api": "^2.8.0"
+        "@lucide/svelte": "^0.541.0",
+        "@tauri-apps/api": "^2.8.0",
+        "@tauri-apps/plugin-haptics": "^2.3.0"
     }
 }

@@ -277,10 +277,10 @@ impl Drop for RadioServer {
     fn drop(&mut self) {
         info!("RadioServer dropped, cleaning up resources");
 
-        if let Ok(mut discovery_service) = self.discovery_service.try_lock() {
-            if let Err(e) = discovery_service.stop_advertising() {
-                error!("Failed to stop mDNS advertising: {e}");
-            }
+        if let Ok(mut discovery_service) = self.discovery_service.try_lock()
+            && let Err(e) = discovery_service.stop_advertising()
+        {
+            error!("Failed to stop mDNS advertising: {e}");
         }
     }
 }

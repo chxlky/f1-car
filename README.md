@@ -43,6 +43,11 @@ f1-car/
 
 ## 🛠 Development Environment
 
-1) Install [Nix Package Manager](https://nixos.org/download/)
-2) Enable flakes in Nix config
-3) Run `nix develop` in the project root to enter the development shell
+```bash
+
+paru -S aarch64-linux-musl arm-none-eabi-gcc
+sudo pacman -S aarch64-linux-gnu-gcc
+rustup target add aarch64-unknown-linux-musl
+rustup target add thumbv7em-none-eabihf
+
+```

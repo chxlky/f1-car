@@ -15,7 +15,7 @@ async fn main() {
 
     info!("Starting F1 Car Radio with UDP Camera Streaming...");
 
-    // Start UDP camera streamer (camera will start on demand)
+    // Start UDP camera streamer
     tokio::spawn(async move {
         match UdpStreamer::new().await {
             Ok(mut streamer) => {
@@ -30,7 +30,6 @@ async fn main() {
         }
     });
 
-    // Start original radio server for telemetry
     match RadioServer::new().await {
         Ok(server) => {
             if let Err(e) = server.run().await {

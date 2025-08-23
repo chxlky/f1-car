@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use specta::Type;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ControlMessage {
@@ -21,4 +22,21 @@ impl Default for CarConfiguration {
             team_name: "Unknown Team".into(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct F1Car {
+    pub id: String,
+    pub number: u32,
+    pub driver: String,
+    pub team: String,
+    pub ip: String,
+    pub port: u16,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
+pub enum CarStatus {
+    Online,
+    Offline,
 }
