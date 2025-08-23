@@ -92,7 +92,7 @@ export type CarRemovedEvent = { car_id: string }
 export type CarUpdatedEvent = { car: F1Car }
 export type DiscoveryError = { code: string; message: string }
 export type DiscoveryStatusEvent = { is_running: boolean; message: string }
-export type F1Car = { id: string; name: string; number: number; driver: string; team: string; ip: string; port: number; ws_endpoint: string; version: string; status: CarStatus; last_seen: number }
+export type F1Car = { id: string; number: number; driver: string; team: string; ip: string; port: number; version: string }
 export type Orientation = "Portrait" | "Landscape"
 
 /** tauri-specta globals **/

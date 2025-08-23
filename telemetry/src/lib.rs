@@ -40,3 +40,5 @@ pub enum CarStatus {
     Online,
     Offline,
 }
+
+pub const SERVICE_TYPE: &str = "_f1-car._udp.local.";

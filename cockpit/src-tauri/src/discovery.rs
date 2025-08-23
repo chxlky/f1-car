@@ -10,9 +10,8 @@ use log::{debug, error, info, warn};
 use mdns_sd::{ServiceDaemon, ServiceEvent};
 use tauri::AppHandle;
 use tauri_specta::Event;
+use telemetry::SERVICE_TYPE;
 use tokio::{task::JoinHandle, time};
-
-const SERVICE_TYPE: &str = "_f1-car._udp.local.";
 
 use crate::types::{
     CarDiscoveredEvent, CarOfflineEvent, CarUpdatedEvent, CarsMap, DiscoveryError, F1Car,

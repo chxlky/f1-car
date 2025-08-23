@@ -47,7 +47,7 @@ impl DiscoveryService {
         info!("Using Local IP: {local_ip}");
 
         let service_name = format!("car-{}", config.number);
-        let service_type = "_f1-car._udp.local.";
+        let service_type = telemetry::SERVICE_TYPE;
         let host_name = format!("{service_name}.local.");
 
         debug!("Service name: {service_name}");
