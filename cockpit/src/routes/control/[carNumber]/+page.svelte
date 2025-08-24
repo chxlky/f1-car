@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+    import { page } from "$app/state";
     import { onMount, onDestroy } from "svelte";
     import type { F1Car } from "$lib/bindings";
     import Joystick from "$lib/components/Joystick.svelte";
@@ -8,10 +8,10 @@
     import { goto } from "$app/navigation";
     import type { Orientation } from "$lib/bindings";
 
-    $: carNumber = $page.params.carNumber;
+    let { carNumber } = page.params;
 
-    let car: F1Car | null = null;
-    let connectionStatus: "disconnected" | "connecting" | "connected" = "disconnected";
+    let car = $state<F1Car | null>(null);
+    let connectionStatus = $state<"disconnected" | "connecting" | "connected">("disconnected");
 
     onMount(async () => {
         // try to find car from cache
@@ -129,18 +129,18 @@
         </div>
 
         {#if connectionStatus === "disconnected"}
-            <button class="rounded bg-blue-600 px-3 py-1 text-white" on:click={connect}>
+            <button class="rounded bg-blue-600 px-3 py-1 text-white" onclick={connect}>
                 Connect
             </button>
         {:else}
-            <button class="rounded bg-gray-700 px-3 py-1 text-white" on:click={disconnect}>
+            <button class="rounded bg-gray-700 px-3 py-1 text-white" onclick={disconnect}>
                 Disconnect
             </button>
         {/if}
 
         <button
             class="rounded border border-white/20 bg-transparent px-3 py-1 text-white"
-            on:click={goBack}>
+            onclick={goBack}>
             ← Back
         </button>
     </div>

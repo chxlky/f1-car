@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-#[cfg(target_os = "android")]
-use jni::{objects::JObject, JavaVM};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -58,6 +56,8 @@ pub fn get_orientation(handle: AppHandle) -> Result<Orientation, String> {
 
     #[cfg(target_os = "android")]
     {
+        use jni::{objects::JObject, JavaVM};
+
         let ctx = ndk_context::android_context();
         let vm = unsafe { JavaVM::from_raw(ctx.vm().cast()) }.map_err(|e| e.to_string())?;
         let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
@@ -126,8 +126,14 @@ pub fn set_orientation(handle: AppHandle, orientation: Orientation) -> Result<()
     let window = handle
         .get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
+
     #[cfg(target_os = "android")]
     {
+        use jni::{
+            objects::{JObject, JValue},
+            JavaVM,
+        };
+
         window
             .run_on_main_thread(move || {
                 let ctx = ndk_context::android_context();
@@ -146,7 +152,7 @@ pub fn set_orientation(handle: AppHandle, orientation: Orientation) -> Result<()
                     &activity,
                     "setScreenOrientation",
                     "(Ljava/lang/String;)V",
-                    &[jni::objects::JValue::from(&jni_orientation_string)],
+                    &[JValue::from(&jni_orientation_string)],
                 )
                 .unwrap();
             })

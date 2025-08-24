@@ -5,18 +5,19 @@
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import CarCard from "$lib/components/CarCard.svelte";
     import Header from "$lib/components/Header.svelte";
-    import { commands, events } from "$lib/bindings";
+    import { commands } from "$lib/bindings";
 
     // use shared selection/connection state from discovery service
-    let selectedCar: F1Car | null = null;
-    $: selectedCar = f1DiscoveryService.selectedCarId
-        ? (f1DiscoveryService.cars.get(f1DiscoveryService.selectedCarId) ?? null)
-        : null;
-    $: connectionStatus = f1DiscoveryService.selectedConnection;
+    let selectedCar = $derived(
+        f1DiscoveryService.selectedCarId
+            ? (f1DiscoveryService.cars.get(f1DiscoveryService.selectedCarId) ?? null)
+            : null
+    );
+    let connectionStatus = $derived(f1DiscoveryService.selectedConnection);
 
     // local reactive copies for template binding
-    let carsArray: F1Car[] = [];
-    let carCount = 0;
+    let carsArray = $state<F1Car[]>([]);
+    let carCount = $state(0);
 
     let unsubscribeStatus: (() => void) | null = null;
     let unsubscribeCars: (() => void) | null = null;
@@ -45,15 +46,8 @@
     });
 
     onDestroy(async () => {
-        if (unsubscribeStatus) {
-            unsubscribeStatus();
-        }
-        if (unsubscribeCars) {
-            unsubscribeCars();
-        }
-        /* if (wsConnection) {
-			wsConnection.disconnect();
-		} */
+        unsubscribeStatus?.();
+        unsubscribeCars?.();
     });
 
     async function connectToCar(car: F1Car) {
@@ -74,10 +68,6 @@
     }
 
     async function disconnect() {
-        /* if (wsConnection) {
-			wsConnection.disconnect();
-			wsConnection = null;
-		} */
         if (f1DiscoveryService.selectedCarId) {
             await commands.disconnectCar(f1DiscoveryService.selectedCarId);
         }

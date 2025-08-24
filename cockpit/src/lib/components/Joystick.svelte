@@ -2,6 +2,8 @@
     import { createEventDispatcher } from "svelte";
     import { onMount } from "svelte";
 
+    // TODO: Update to svelte 5
+
     const dispatch = createEventDispatcher();
 
     export let size = 140; // px outer diameter
