@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
+use anyhow::Context;
+#[cfg(target_os = "android")]
 use jni::{objects::JObject, JavaVM};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, LogicalSize, Manager, Size, State};
+use tauri_specta::Event;
 use tokio::sync::Mutex;
 
 use crate::discovery::DiscoveryService;
-use crate::types::{DiscoveryError, F1Car};
+use crate::types::{CarUpdatedEvent, DiscoveryError, F1Car};
 
 #[macro_export]
 macro_rules! collect_commands {
@@ -19,6 +22,8 @@ macro_rules! collect_commands {
             $crate::commands::start_discovery,
             $crate::commands::stop_discovery,
             $crate::commands::get_discovered_cars,
+            $crate::commands::connect_to_car,
+            $crate::commands::disconnect_car,
             $crate::commands::get_car_by_id,
             $crate::commands::is_discovery_running,
         ]
@@ -47,7 +52,12 @@ pub enum Orientation {
 #[tauri::command]
 #[specta::specta]
 pub fn get_orientation(handle: AppHandle) -> Result<Orientation, String> {
-    if cfg!(target_os = "android") {
+    let window = handle
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window not found".to_string())?;
+
+    #[cfg(target_os = "android")]
+    {
         let ctx = ndk_context::android_context();
         let vm = unsafe { JavaVM::from_raw(ctx.vm().cast()) }.map_err(|e| e.to_string())?;
         let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
@@ -74,12 +84,37 @@ pub fn get_orientation(handle: AppHandle) -> Result<Orientation, String> {
         let orientation = match orientation_string.as_str() {
             "portrait" => Orientation::Portrait,
             "landscape" => Orientation::Landscape,
-            _ => Orientation::Portrait,
+            other => {
+                return Err(format!(
+                    "Unknown orientation returned from Android: {}",
+                    other
+                ))
+            }
         };
 
         Ok(orientation)
-    } else {
-        // Return default Portrait orientation on non-Android platforms
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    {
+        let size = window.inner_size().map_err(|e| e.to_string())?;
+
+        let orientation = if size.height > size.width {
+            Orientation::Portrait
+        } else {
+            Orientation::Landscape
+        };
+
+        Ok(orientation)
+    }
+
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux"
+    )))]
+    {
         let _ = handle; // Suppress unused variable warning
         Ok(Orientation::Portrait)
     }
@@ -88,11 +123,11 @@ pub fn get_orientation(handle: AppHandle) -> Result<Orientation, String> {
 #[tauri::command]
 #[specta::specta]
 pub fn set_orientation(handle: AppHandle, orientation: Orientation) -> Result<(), String> {
-    if cfg!(target_os = "android") {
-        let window = handle
-            .get_webview_window("main")
-            .ok_or_else(|| "Main window not found".to_string())?;
-
+    let window = handle
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window not found".to_string())?;
+    #[cfg(target_os = "android")]
+    {
         window
             .run_on_main_thread(move || {
                 let ctx = ndk_context::android_context();
@@ -118,8 +153,35 @@ pub fn set_orientation(handle: AppHandle, orientation: Orientation) -> Result<()
             .map_err(|e| e.to_string())?;
 
         Ok(())
-    } else {
-        // Do nothing on non-Android platforms
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    {
+        match orientation {
+            Orientation::Portrait => {
+                let _ = window.set_size(Size::Logical(LogicalSize {
+                    width: 450.0,
+                    height: 900.0,
+                }));
+            }
+            Orientation::Landscape => {
+                let _ = window.set_size(Size::Logical(LogicalSize {
+                    width: 900.0,
+                    height: 450.0,
+                }));
+            }
+        }
+
+        Ok(())
+    }
+
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux"
+    )))]
+    {
         let _ = handle; // Suppress unused variable warning
         let _ = orientation; // Suppress unused variable warning
         Ok(())
@@ -186,6 +248,77 @@ pub async fn get_car_by_id(
 ) -> Result<Option<F1Car>, DiscoveryError> {
     let service = discovery_service.lock().await;
     Ok(service.get_car_by_id(&car_id))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn connect_to_car(
+    car_id: String,
+    handle: AppHandle,
+    discovery_service: State<'_, Arc<Mutex<DiscoveryService>>>,
+) -> Result<(), DiscoveryError> {
+    let service = discovery_service.lock().await;
+    if let Some(mut car) = service.get_car_by_id(&car_id) {
+        // set status to Connecting and emit update
+        car.connection_status = crate::types::ConnectionStatus::Connecting;
+        CarUpdatedEvent { car: car.clone() }
+            .emit(&handle)
+            .context("Failed to emit car-updated event")?;
+
+        // spawn a background task to simulate connection and then set Connected
+        let cars_map = service.get_cars();
+        let handle_clone = handle.clone();
+        tokio::spawn(async move {
+            // simulate network connect attempt
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            // update cached car
+            {
+                let mut guard = match cars_map.lock() {
+                    Ok(g) => g,
+                    Err(_) => return,
+                };
+                if let Some(c) = guard.get_mut(&car_id) {
+                    c.connection_status = crate::types::ConnectionStatus::Connected;
+                    c.last_seen = Some(std::time::SystemTime::now());
+                    let _ = CarUpdatedEvent { car: c.clone() }.emit(&handle_clone);
+                }
+            }
+        });
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn disconnect_car(
+    car_id: String,
+    handle: AppHandle,
+    discovery_service: State<'_, Arc<Mutex<DiscoveryService>>>,
+) -> Result<(), DiscoveryError> {
+    let service = discovery_service.lock().await;
+    if let Some(mut car) = service.get_car_by_id(&car_id) {
+        car.connection_status = crate::types::ConnectionStatus::Disconnected;
+        car.last_seen = Some(std::time::SystemTime::now());
+        CarUpdatedEvent { car: car.clone() }
+            .emit(&handle)
+            .context("Failed to emit car-updated event")?;
+
+        // update cache
+        let cars_map = service.get_cars();
+        {
+            let mut guard = match cars_map.lock() {
+                Ok(g) => g,
+                Err(_) => return Ok(()),
+            };
+            if let Some(c) = guard.get_mut(&car_id) {
+                c.connection_status = crate::types::ConnectionStatus::Disconnected;
+                c.last_seen = Some(std::time::SystemTime::now());
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

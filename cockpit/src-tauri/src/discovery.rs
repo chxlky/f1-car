@@ -183,6 +183,8 @@ impl DiscoveryService {
                     .get_property_val_str("version")
                     .unwrap_or("Unknown")
                     .to_string(),
+                connection_status: crate::types::ConnectionStatus::Disconnected,
+                last_seen: None,
             };
 
             let is_new_car;

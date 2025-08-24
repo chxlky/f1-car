@@ -13,15 +13,44 @@ import {
 
 export class F1CarDiscoveryService {
     cars = $state(new Map<string, F1Car>());
+    // shared selection and connection state
+    selectedCarId = $state<string | null>(null);
+    selectedConnection = $state<"disconnected" | "connecting" | "connected">("disconnected");
     isRunning = $state(false);
     discoveryStatus = $state<string>("Stopped");
     error = $state<string | null>(null);
 
     private unlistenFns: UnlistenFn[] = [];
     private statusListeners: Array<(status: DiscoveryStatusEvent) => void> = [];
+    private carListeners: Array<(cars: F1Car[], count: number) => void> = [];
 
-    carsArray = $derived(Array.from(this.cars.values()).sort((a, b) => a.number - b.number));
-    carCount = $derived(this.carsArray.length);
+    carsArray = $state<F1Car[]>([]);
+    carCount = $state<number>(0);
+
+    private mapConnectionStatus(s: unknown): "disconnected" | "connecting" | "connected" {
+        if (!s) return "disconnected";
+        if (typeof s === "string") {
+            if (s === "Connected") return "connected";
+            if (s === "Connecting") return "connecting";
+            return "disconnected";
+        }
+        if (
+            typeof s === "object" &&
+            s !== null &&
+            Object.prototype.hasOwnProperty.call(s, "Failed")
+        )
+            return "disconnected";
+        return "disconnected";
+    }
+
+    selectCar(carId: string | null) {
+        this.selectedCarId = carId;
+        if (!carId) this.selectedConnection = "disconnected";
+        else {
+            const c = this.cars.get(carId);
+            this.selectedConnection = this.mapConnectionStatus(c?.connection_status as unknown);
+        }
+    }
 
     async startDiscovery(): Promise<void> {
         console.log("Starting mDNS discovery...");
@@ -85,6 +114,9 @@ export class F1CarDiscoveryService {
                 res.data.forEach((car) => {
                     this.cars.set(car.id, car);
                 });
+                this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+                this.carCount = this.carsArray.length;
+                this.notifyCarListeners();
             });
 
             return Array.from(this.cars.values());
@@ -170,6 +202,19 @@ export class F1CarDiscoveryService {
         };
     }
 
+    onCarsChanged(callback: (cars: F1Car[], count: number) => void): () => void {
+        this.carListeners.push(callback);
+
+        return () => {
+            const idx = this.carListeners.indexOf(callback);
+            if (idx > -1) this.carListeners.splice(idx, 1);
+        };
+    }
+
+    private notifyCarListeners(): void {
+        this.carListeners.forEach((cb) => cb(this.carsArray, this.carCount));
+    }
+
     clearError(): void {
         this.error = null;
     }
@@ -180,6 +225,16 @@ export class F1CarDiscoveryService {
         const unlistenDiscovered = await events.carDiscoveredEvent.listen((event) => {
             const data = event.payload as CarDiscoveredEvent;
             this.cars.set(data.car.id, data.car);
+            // if this is the selected car, update connection state
+            if (this.selectedCarId === data.car.id) {
+                this.selectedConnection = this.mapConnectionStatus(
+                    data.car.connection_status as unknown
+                );
+            }
+            // refresh derived list
+            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+            this.carCount = this.carsArray.length;
+            this.notifyCarListeners();
             console.log(
                 `mDNS: Car discovered: #${data.car.number} ${data.car.driver} (${data.car.team}) id=${data.car.id} ip=${data.car.ip}`
             );
@@ -189,6 +244,14 @@ export class F1CarDiscoveryService {
         const unlistenUpdated = await events.carUpdatedEvent.listen((event) => {
             const data = event.payload as CarUpdatedEvent;
             this.cars.set(data.car.id, data.car);
+            if (this.selectedCarId === data.car.id) {
+                this.selectedConnection = this.mapConnectionStatus(
+                    data.car.connection_status as unknown
+                );
+            }
+            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+            this.carCount = this.carsArray.length;
+            this.notifyCarListeners();
             console.log(`mDNS: Car updated: id=${data.car.id} #${data.car.number}`);
         });
 
@@ -197,6 +260,14 @@ export class F1CarDiscoveryService {
             const data = event.payload as CarOfflineEvent;
             if (this.cars.has(data.car.id)) {
                 this.cars.set(data.car.id, data.car);
+                if (this.selectedCarId === data.car.id) {
+                    this.selectedConnection = this.mapConnectionStatus(
+                        data.car.connection_status as unknown
+                    );
+                }
+                this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+                this.carCount = this.carsArray.length;
+                this.notifyCarListeners();
                 console.log(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
             }
         });
@@ -205,6 +276,13 @@ export class F1CarDiscoveryService {
         const unlistenRemoved = await events.carRemovedEvent.listen((event) => {
             const data = event.payload as CarRemovedEvent;
             this.cars.delete(data.car_id);
+            // clear selection if the removed car was selected
+            if (this.selectedCarId === data.car_id) {
+                this.selectCar(null);
+            }
+            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+            this.carCount = this.carsArray.length;
+            this.notifyCarListeners();
             console.log(`🗑️ mDNS: Car removed: ${data.car_id}`);
         });
 

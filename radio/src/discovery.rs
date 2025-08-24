@@ -92,6 +92,8 @@ impl DiscoveryService {
             ip: local_ip.to_string(),
             port,
             version: version.clone(),
+            connection_status: telemetry::ConnectionStatus::Disconnected,
+            last_seen: None,
         };
 
         self.service_info = Some(service_info);

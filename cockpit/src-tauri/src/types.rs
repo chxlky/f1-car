@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_specta::Event;
-pub use telemetry::{CarStatus, F1Car};
+pub use telemetry::{CarStatus, ConnectionStatus, F1Car};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 pub struct CarDiscoveredEvent {
