@@ -1,23 +1,21 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
     import { goto } from "$app/navigation";
-    import type { F1Car } from "$lib/bindings";
+    import { type F1Car, commands } from "$lib/bindings";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import CarCard from "$lib/components/CarCard.svelte";
     import Header from "$lib/components/Header.svelte";
-    import { commands } from "$lib/bindings";
 
-    // use shared selection/connection state from discovery service
+    let selectedCarId = $derived(f1DiscoveryService.selectedCarId!);
     let selectedCar = $derived(
-        f1DiscoveryService.selectedCarId
-            ? (f1DiscoveryService.cars.get(f1DiscoveryService.selectedCarId) ?? null)
-            : null
+        selectedCarId ? f1DiscoveryService.cars.get(selectedCarId) : undefined
     );
     let connectionStatus = $derived(f1DiscoveryService.selectedConnection);
 
-    // local reactive copies for template binding
-    let carsArray = $state<F1Car[]>([]);
-    let carCount = $state(0);
+    let carsArray = $derived(
+        Array.from(f1DiscoveryService.cars.values()).sort((a, b) => a.number - b.number)
+    );
+    let carCount = $derived(carsArray.length);
 
     let unsubscribeStatus: (() => void) | null = null;
     let unsubscribeCars: (() => void) | null = null;
@@ -29,7 +27,6 @@
                 console.log("Status changed:", status);
             });
 
-            // subscribe to car list updates
             unsubscribeCars = f1DiscoveryService.onCarsChanged((cars, count) => {
                 carsArray = cars;
                 carCount = count;
@@ -51,34 +48,24 @@
     });
 
     async function connectToCar(car: F1Car) {
-        // set shared state
         f1DiscoveryService.selectCar(car.id);
-        f1DiscoveryService.selectedConnection = "connecting";
+        f1DiscoveryService.selectedConnection = "Connecting";
 
-        // Ask backend to connect; backend will emit updates we listen for
-        const res = await commands.connectToCar(car.id);
-        if (res.status === "error") {
-            console.error("Failed to connect:", res.error);
-            f1DiscoveryService.selectCar(null);
-            return;
-        }
+        await commands.connectToCar(car.id).then((res) => {
+            if (res.status === "error") {
+                console.error("Failed to connect:", res.error);
+                f1DiscoveryService.selectCar(undefined);
+                return res;
+            }
+        });
 
-        // navigate to control page for this car
         goto(`/#/control/${encodeURIComponent(String(car.number))}`);
-    }
-
-    async function disconnect() {
-        if (f1DiscoveryService.selectedCarId) {
-            await commands.disconnectCar(f1DiscoveryService.selectedCarId);
-        }
-        f1DiscoveryService.selectCar(null);
-        console.log("Disconnected from car");
     }
 </script>
 
 <div class="text-white">
     <Header />
-    <main class="mx-auto max-w-7xl p-6">
+    <div class="mx-auto max-w-7xl p-6">
         {#if f1DiscoveryService.error}
             <div class="mb-6 rounded border border-red-500 bg-red-900/50 px-4 py-3 text-red-200">
                 <strong>Error:</strong>
@@ -91,7 +78,7 @@
             </div>
         {/if}
 
-        <h1 class="mt-12 text-center font-f1 text-4xl">DISCOVER CARS</h1>
+        <h1 class="font-f1 mt-12 text-center text-4xl">DISCOVER CARS</h1>
 
         <div class="mt-8">
             {#if carCount === 0}
@@ -111,12 +98,12 @@
                             {car}
                             onConnect={connectToCar}
                             isSelected={selectedCar?.id === car.id &&
-                                connectionStatus === "connected"}
+                                connectionStatus === "Connected"}
                             isConnecting={selectedCar?.id === car.id &&
-                                connectionStatus === "connecting"} />
+                                connectionStatus === "Connecting"} />
                     {/each}
                 </div>
             {/if}
         </div>
-    </main>
+    </div>
 </div>

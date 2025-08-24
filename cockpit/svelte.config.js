@@ -9,6 +9,11 @@ const config = {
         router: {
             type: "hash"
         }
+    },
+    compilerOptions: {
+        experimental: {
+            async: true
+        }
     }
 };
 

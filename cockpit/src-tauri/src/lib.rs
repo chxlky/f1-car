@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tauri::Wry;
+use tauri::{Manager, Wry};
 use tauri_specta::{
     collect_commands as specta_collect_commands, collect_events as specta_collect_events, Builder,
 };
@@ -33,6 +33,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+                
+                let window = app
+                    .get_webview_window("main")
+                    .expect("Failed to get webview window");
+                window.open_devtools();
             }
             Ok(())
         })

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { F1Car } from "$lib/bindings";
+    import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
 
     interface Props {
         car: F1Car;
@@ -13,24 +14,16 @@
     const [firstName, ...lastNameParts] = car.driver.split(" ");
     const lastName = lastNameParts.join(" ");
 
-    // connection_status from bindings can be a string or an enum-like object for Failed
-    const normalizedStatus = (() => {
-        const s = car.connection_status as any;
-        if (!s) return "Disconnected";
-        if (typeof s === "string") return s;
-        if (s && typeof s === "object" && "Failed" in s) return "Failed";
-        return "Disconnected";
-    })();
-    const isConnectedRemote = normalizedStatus === "Connected";
-    const isConnectingRemote = normalizedStatus === "Connecting";
+    let remoteCar = $derived(f1DiscoveryService.cars.get(car.id));
+    let isConnectedRemote = $derived(remoteCar!.connection_status === "Connected");
 </script>
 
 <div
     class="flex h-full flex-col justify-between rounded-lg border border-white/20 bg-white/5 p-6 transition-all hover:border-white/50 hover:bg-white/10">
     <div class="flex items-start justify-between">
         <div class="ml-4 text-center">
-            <p class="font-f1-cursive text-4xl leading-none text-white italic">{firstName}</p>
-            <h3 class="font-f1 text-3xl text-white uppercase">{lastName}</h3>
+            <p class="font-f1-cursive text-4xl italic leading-none text-white">{firstName}</p>
+            <h3 class="font-f1 text-3xl uppercase text-white">{lastName}</h3>
             <!-- <p class="text-md mt-1 text-gray-300">{car.team}</p> -->
         </div>
         <div class="text-right">
@@ -41,12 +34,10 @@
 
     <button
         onclick={() => onConnect(car)}
-        disabled={isConnectingRemote || isConnectedRemote || isConnecting}
-        class="mt-6 w-full rounded-md border border-white/50 bg-transparent px-4 py-2 font-f1 text-white transition-colors hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:border-gray-600 disabled:bg-gray-800 disabled:text-gray-500">
+        disabled={isConnecting}
+        class="font-f1 mt-6 w-full rounded-md border border-white/50 bg-transparent px-4 py-2 text-white transition-colors hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:border-gray-600 disabled:bg-gray-800 disabled:text-gray-500">
         {#if isSelected && isConnecting}
             Connecting...
-        {:else if isSelected && isConnectedRemote}
-            🔗 Connected
         {:else if isConnectedRemote}
             Connected
         {:else}

@@ -3,52 +3,28 @@ import { SvelteMap as Map } from "svelte/reactivity";
 import {
     commands,
     events,
-    type CarDiscoveredEvent,
-    type CarOfflineEvent,
-    type CarRemovedEvent,
-    type CarUpdatedEvent,
+    type ConnectionStatus,
     type DiscoveryStatusEvent,
     type F1Car
 } from "../bindings";
 
 export class F1CarDiscoveryService {
     cars = $state(new Map<string, F1Car>());
-    // shared selection and connection state
-    selectedCarId = $state<string | null>(null);
-    selectedConnection = $state<"disconnected" | "connecting" | "connected">("disconnected");
+    selectedCarId = $state<string | undefined>(undefined);
+    selectedConnection = $state<ConnectionStatus>("Disconnected");
     isRunning = $state(false);
-    discoveryStatus = $state<string>("Stopped");
-    error = $state<string | null>(null);
-
+    error = $state<string | undefined>(undefined);
     private unlistenFns: UnlistenFn[] = [];
     private statusListeners: Array<(status: DiscoveryStatusEvent) => void> = [];
     private carListeners: Array<(cars: F1Car[], count: number) => void> = [];
 
-    carsArray = $state<F1Car[]>([]);
-    carCount = $state<number>(0);
-
-    private mapConnectionStatus(s: unknown): "disconnected" | "connecting" | "connected" {
-        if (!s) return "disconnected";
-        if (typeof s === "string") {
-            if (s === "Connected") return "connected";
-            if (s === "Connecting") return "connecting";
-            return "disconnected";
-        }
-        if (
-            typeof s === "object" &&
-            s !== null &&
-            Object.prototype.hasOwnProperty.call(s, "Failed")
-        )
-            return "disconnected";
-        return "disconnected";
-    }
-
-    selectCar(carId: string | null) {
+    selectCar(carId: string | undefined) {
         this.selectedCarId = carId;
-        if (!carId) this.selectedConnection = "disconnected";
-        else {
-            const c = this.cars.get(carId);
-            this.selectedConnection = this.mapConnectionStatus(c?.connection_status as unknown);
+        if (!carId) {
+            this.selectedConnection = "Disconnected";
+        } else {
+            const car = this.cars.get(carId);
+            this.selectedConnection = car?.connection_status ?? "Disconnected";
         }
     }
 
@@ -56,8 +32,7 @@ export class F1CarDiscoveryService {
         console.log("Starting mDNS discovery...");
 
         try {
-            this.error = null;
-            this.discoveryStatus = "Starting...";
+            this.error = undefined;
 
             await this.setupEventListeners();
             await commands.startDiscovery().then((res) => {
@@ -67,14 +42,10 @@ export class F1CarDiscoveryService {
             });
 
             this.isRunning = true;
-
-            // Refresh cars to get any that might have been discovered before we started
             await this.refreshCars();
-            this.discoveryStatus = "Running";
         } catch (error) {
             this.error = `Failed to start discovery: ${error}`;
             this.isRunning = false;
-            this.discoveryStatus = "Error";
 
             throw new Error(this.error);
         }
@@ -84,7 +55,7 @@ export class F1CarDiscoveryService {
         console.log("Stopping mDNS discovery...");
 
         try {
-            this.error = null;
+            this.error = undefined;
             await commands.stopDiscovery().then((res) => {
                 if (res.status === "error") {
                     console.error(`Failed to stop discovery: ${res.error.message}`);
@@ -92,9 +63,7 @@ export class F1CarDiscoveryService {
             });
 
             this.isRunning = false;
-            this.discoveryStatus = "Stopped";
 
-            // Cleanup event listeners
             await this.cleanupEventListeners();
         } catch (err) {
             this.error = `Failed to stop discovery: ${err}`;
@@ -104,18 +73,16 @@ export class F1CarDiscoveryService {
 
     async refreshCars(): Promise<F1Car[]> {
         try {
-            this.error = null;
+            this.error = undefined;
             await commands.getDiscoveredCars().then((res) => {
                 if (res.status === "error") {
                     throw new Error(`Failed to refresh cars: ${res.error.message}`);
                 }
 
                 this.cars.clear();
-                res.data.forEach((car) => {
-                    this.cars.set(car.id, car);
-                });
-                this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
-                this.carCount = this.carsArray.length;
+                res.data.forEach((car) => this.cars.set(car.id, car));
+
+                // notify listeners with the derived array and count
                 this.notifyCarListeners();
             });
 
@@ -123,12 +90,12 @@ export class F1CarDiscoveryService {
         } catch (err) {
             this.error = `Failed to refresh cars: ${err}`;
             console.error(this.error);
+
             return [];
         }
     }
 
     async getCarById(carId: string): Promise<F1Car | null> {
-        // Check local cache first
         const cached = this.cars.get(carId);
         if (cached) return cached;
 
@@ -141,8 +108,9 @@ export class F1CarDiscoveryService {
                 }
 
                 if (res.data) {
-                    // cache and return the remote car
                     this.cars.set(res.data.id, res.data);
+                    // notify callers that our backing map changed
+                    this.notifyCarListeners();
                     return res.data;
                 }
                 return null;
@@ -175,22 +143,10 @@ export class F1CarDiscoveryService {
             });
     }
 
-    // Get car by various criteria
     getCarByNumber(number: number): F1Car | undefined {
-        return this.carsArray.find((car) => car.number === number);
+        return Array.from(this.cars.values()).find((car) => car.number === number);
     }
 
-    getCarsByTeam(team: string): F1Car[] {
-        return this.carsArray.filter((car) => car.team.toLowerCase().includes(team.toLowerCase()));
-    }
-
-    getCarsByDriver(driver: string): F1Car[] {
-        return this.carsArray.filter((car) =>
-            car.driver.toLowerCase().includes(driver.toLowerCase())
-        );
-    }
-
-    // Status change listener
     onStatusChanged(callback: (status: DiscoveryStatusEvent) => void): () => void {
         this.statusListeners.push(callback);
 
@@ -212,86 +168,68 @@ export class F1CarDiscoveryService {
     }
 
     private notifyCarListeners(): void {
-        this.carListeners.forEach((cb) => cb(this.carsArray, this.carCount));
+        const arr = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
+        const count = arr.length;
+        // update any derived state if needed (not storing derived state anymore)
+        this.carListeners.forEach((cb) => cb(arr, count));
     }
 
     clearError(): void {
-        this.error = null;
+        this.error = undefined;
     }
 
-    // Private methods
     private async setupEventListeners(): Promise<void> {
-        // Listen for car discovered events
         const unlistenDiscovered = await events.carDiscoveredEvent.listen((event) => {
-            const data = event.payload as CarDiscoveredEvent;
+            const data = event.payload;
             this.cars.set(data.car.id, data.car);
             // if this is the selected car, update connection state
             if (this.selectedCarId === data.car.id) {
-                this.selectedConnection = this.mapConnectionStatus(
-                    data.car.connection_status as unknown
-                );
+                this.selectedConnection = data.car.connection_status;
             }
-            // refresh derived list
-            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
-            this.carCount = this.carsArray.length;
+            // notify listeners with the updated derived list/count
             this.notifyCarListeners();
             console.log(
                 `mDNS: Car discovered: #${data.car.number} ${data.car.driver} (${data.car.team}) id=${data.car.id} ip=${data.car.ip}`
             );
         });
 
-        // Listen for car updated events
         const unlistenUpdated = await events.carUpdatedEvent.listen((event) => {
-            const data = event.payload as CarUpdatedEvent;
+            const data = event.payload;
             this.cars.set(data.car.id, data.car);
             if (this.selectedCarId === data.car.id) {
-                this.selectedConnection = this.mapConnectionStatus(
-                    data.car.connection_status as unknown
-                );
+                this.selectedConnection = data.car.connection_status;
             }
-            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
-            this.carCount = this.carsArray.length;
             this.notifyCarListeners();
             console.log(`mDNS: Car updated: id=${data.car.id} #${data.car.number}`);
         });
 
-        // Listen for car offline events
         const unlistenOffline = await events.carOfflineEvent.listen((event) => {
-            const data = event.payload as CarOfflineEvent;
+            const data = event.payload;
             if (this.cars.has(data.car.id)) {
                 this.cars.set(data.car.id, data.car);
                 if (this.selectedCarId === data.car.id) {
-                    this.selectedConnection = this.mapConnectionStatus(
-                        data.car.connection_status as unknown
-                    );
+                    this.selectedConnection = data.car.connection_status;
                 }
-                this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
-                this.carCount = this.carsArray.length;
                 this.notifyCarListeners();
                 console.log(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
             }
         });
 
-        // Listen for car removed events
         const unlistenRemoved = await events.carRemovedEvent.listen((event) => {
-            const data = event.payload as CarRemovedEvent;
+            const data = event.payload;
             this.cars.delete(data.car_id);
             // clear selection if the removed car was selected
             if (this.selectedCarId === data.car_id) {
-                this.selectCar(null);
+                this.selectCar(undefined);
             }
-            this.carsArray = Array.from(this.cars.values()).sort((a, b) => a.number - b.number);
-            this.carCount = this.carsArray.length;
             this.notifyCarListeners();
-            console.log(`🗑️ mDNS: Car removed: ${data.car_id}`);
+            console.log(`mDNS: Car removed: ${data.car_id}`);
         });
 
-        // Listen for discovery status events
         const unlistenStatus = await events.discoveryStatusEvent.listen((event) => {
-            const data = event.payload as DiscoveryStatusEvent;
-            console.log(`📡 Discovery status: ${data.message} (running: ${data.is_running})`);
+            const data = event.payload;
+            console.log(`Discovery status: ${data.message} (running: ${data.is_running})`);
             this.isRunning = data.is_running;
-            this.discoveryStatus = data.message;
             this.notifyStatusListeners(data);
         });
 

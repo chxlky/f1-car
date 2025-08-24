@@ -1,169 +1,145 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { onMount, onDestroy } from "svelte";
-    import type { F1Car } from "$lib/bindings";
+    import { type ConnectionStatus, type F1Car, commands } from "$lib/bindings";
     import Joystick from "$lib/components/Joystick.svelte";
-    import { commands } from "$lib/bindings";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import { goto } from "$app/navigation";
-    import type { Orientation } from "$lib/bindings";
+    import { ChevronLeft } from "@lucide/svelte";
+    import { vibrate } from "@tauri-apps/plugin-haptics";
 
     let { carNumber } = page.params;
 
     let car = $state<F1Car | null>(null);
-    let connectionStatus = $state<"disconnected" | "connecting" | "connected">("disconnected");
+    let connectionStatus = $state<ConnectionStatus>("Disconnected");
 
     onMount(async () => {
-        // try to find car from cache
-        car =
-            f1DiscoveryService.carsArray.find((c) => String(c.number) === String(carNumber)) ??
-            null;
-        if (!car) {
-            // fallback: refresh and try again
-            await f1DiscoveryService.refreshCars();
-            car =
-                f1DiscoveryService.carsArray.find((c) => String(c.number) === String(carNumber)) ??
-                null;
-        }
-        // select this car in the shared service so state is synced
-        if (car) {
-            f1DiscoveryService.selectCar(car.id);
-        }
-    });
+        await commands
+            .setOrientation("Landscape")
+            .then(async (res) => {
+                if (res.status === "error") {
+                    console.error("Failed to set orientation to Landscape:", res.error);
+                }
 
-    // Set orientation to landscape when entering the control page, and revert to portrait on exit
-    onMount(async () => {
-        try {
-            const res = await commands.setOrientation("Landscape" as Orientation);
-            if (res.status === "error") {
-                console.error("Failed to set orientation to Landscape:", res.error);
-            }
-        } catch (err) {
-            console.error("Error setting orientation to Landscape:", err);
-        }
+                car = f1DiscoveryService.getCarByNumber(Number(carNumber)) ?? null;
+                f1DiscoveryService.selectCar(car?.id);
+
+                await connect().then(() => console.log("Connected to car", car?.number));
+            })
+            .catch(() => {
+                console.error("Error setting orientation to Landscape");
+            });
     });
 
     onDestroy(async () => {
-        try {
-            // revert orientation
-            const res = await commands.setOrientation("Portrait" as Orientation);
-            if (res.status === "error") {
-                console.error("Failed to set orientation to Portrait:", res.error);
-            }
-        } catch (err) {
-            console.error("Error setting orientation to Portrait:", err);
-        }
+        await commands
+            .setOrientation("Portrait")
+            .then((res) => {
+                if (res.status === "error") {
+                    console.error("Failed to set orientation to Portrait:", res.error);
+                }
+            })
+            .catch(() => {
+                console.error("Error setting orientation to Portrait");
+            });
 
-        // ensure we disconnect and reset local state
         try {
             if (car) {
-                await commands.disconnectCar(car.id);
+                await commands.disconnectCar(car.id).then(async () => {
+                    connectionStatus = "Disconnected";
+
+                    await disconnect();
+                });
             }
         } catch (err) {
             console.error("Error disconnecting on destroy:", err);
         }
-
-        connectionStatus = "disconnected";
     });
 
     async function connect() {
         if (!car) return;
-        // set shared state
-        f1DiscoveryService.selectedConnection = "connecting";
-        const res = await commands.connectToCar(car.id);
-        if (res.status === "error") {
-            console.error("Failed to connect:", res.error);
-            connectionStatus = "disconnected";
-            return;
-        }
 
-        // Let backend event or polling update the cache; reflect it here
-        const updated = await f1DiscoveryService.getCarById(car.id);
-        if (updated)
+        f1DiscoveryService.selectedConnection = "Connecting";
+        await commands.connectToCar(car.id).then((res) => {
+            if (res.status === "error") {
+                console.error("Failed to connect:", res.error);
+                connectionStatus = "Disconnected";
+                return;
+            }
+        });
+
+        await f1DiscoveryService.getCarById(car.id).then((car) => {
             f1DiscoveryService.selectedConnection =
-                (updated.connection_status as any) === "Connected" ? "connected" : "connecting";
+                (car?.connection_status as any) === "Connected" ? "Connected" : "Connecting";
+        });
     }
 
     async function disconnect() {
         if (!car) return;
+
         await commands.disconnectCar(car.id);
-        f1DiscoveryService.selectCar(null);
+        f1DiscoveryService.selectCar(undefined);
         goto("/#/");
-    }
-
-    async function goBack() {
-        try {
-            // revert orientation immediately for a snappier test
-            await commands.setOrientation("Portrait");
-        } catch (err) {
-            console.error("Failed to set orientation to Portrait on back:", err);
-        }
-        goto("/#/");
-    }
-
-    function handleLeft(e: CustomEvent) {
-        const { x, y } = e.detail;
-        console.log("left joystick", x, y);
-    }
-
-    function handleRight(e: CustomEvent) {
-        const { x, y } = e.detail;
-        console.log("right joystick", x, y);
     }
 </script>
 
-<main class="p-6">
-    <h1 class="text-2xl font-bold">Control car #{carNumber}</h1>
-    {#if car}
-        <p class="text-sm text-gray-400">Driver: {car.driver} — Team: {car.team}</p>
-    {/if}
+<div class="relative min-h-screen p-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center">
+            <button
+                class="rounded border border-white/20 bg-transparent px-3 py-1 text-white"
+                onclick={async () => {
+                    await commands.setOrientation("Portrait").catch((e) => {
+                        console.error("Failed to set orientation to Portrait on back:", e);
+                    });
 
-    <div class="mt-4 flex items-center gap-3">
-        <div
-            class="rounded-full px-3 py-1 text-sm font-medium"
-            class:!bg-red-600={connectionStatus === "disconnected"}
-            class:!bg-yellow-500={connectionStatus === "connecting"}
-            class:!bg-green-600={connectionStatus === "connected"}
-            style="color: white;">
-            {connectionStatus}
+                    await vibrate(100);
+                    goto("/#/");
+                }}>
+                <ChevronLeft />
+            </button>
+
+            <h1 class="font-f1 ml-4 text-2xl text-white">Car #{carNumber}</h1>
         </div>
 
-        {#if connectionStatus === "disconnected"}
-            <button class="rounded bg-blue-600 px-3 py-1 text-white" onclick={connect}>
-                Connect
-            </button>
-        {:else}
-            <button class="rounded bg-gray-700 px-3 py-1 text-white" onclick={disconnect}>
-                Disconnect
-            </button>
-        {/if}
+        <div class="flex flex-1 justify-center">
+            {#if car}
+                <div class="whitespace-nowrap text-sm text-gray-400">{car.driver} - {car.team}</div>
+            {/if}
+        </div>
 
-        <button
-            class="rounded border border-white/20 bg-transparent px-3 py-1 text-white"
-            onclick={goBack}>
-            ← Back
-        </button>
+        <div class="ml-4">
+            <div
+                class="rounded-full px-3 py-1 text-sm font-medium text-white"
+                class:!bg-red-600={connectionStatus === "Disconnected"}
+                class:!bg-yellow-500={connectionStatus === "Connecting"}
+                class:!bg-green-600={connectionStatus === "Connected"}>
+                {connectionStatus}
+            </div>
+        </div>
     </div>
 
-    <div class="mt-6 grid grid-cols-2 gap-4">
-        <div class="flex flex-col items-center">
-            <div class="mb-2 text-sm font-medium">Drive (Throttle / Steering)</div>
-            <Joystick
-                size={220}
-                on:input={handleLeft}
-                on:end={() => {
-                    /* stop */
-                }} />
-        </div>
-
-        <div class="flex flex-col items-center">
-            <div class="mb-2 text-sm font-medium">Camera / Fine control</div>
-            <Joystick
-                size={180}
-                on:input={handleRight}
-                on:end={() => {
-                    /* stop */
-                }} />
-        </div>
+    <div class="absolute bottom-6 left-6">
+        <Joystick
+            size={200}
+            on:input={(event) => {
+                const { x, y } = event.detail;
+                console.log("left joystick", x, y);
+            }}
+            on:end={() => {
+                /* stop */
+            }} />
     </div>
-</main>
+
+    <div class="absolute bottom-6 right-6">
+        <Joystick
+            size={200}
+            on:input={(event) => {
+                const { x, y } = event.detail;
+                console.log("right joystick", x, y);
+            }}
+            on:end={() => {
+                /* stop */
+            }} />
+    </div>
+</div>
