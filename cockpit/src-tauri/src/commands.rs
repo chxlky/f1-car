@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::Context;
 use log::{error, info};
@@ -7,9 +7,16 @@ use specta::Type;
 use tauri::{AppHandle, LogicalSize, Manager, Size, State};
 use tauri_specta::Event;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
+
+// Global holder for the joystick service task so it can be stopped later.
+static JOYSTICK_TASK: OnceLock<JoinHandle<()>> = OnceLock::new();
 
 use crate::discovery::DiscoveryService;
 use crate::types::{CarUpdatedEvent, DiscoveryError, F1Car};
+use std::net::SocketAddr;
+
+use crate::joystick;
 
 #[macro_export]
 macro_rules! collect_commands {
@@ -24,6 +31,8 @@ macro_rules! collect_commands {
             $crate::commands::disconnect_car,
             $crate::commands::get_car_by_id,
             $crate::commands::is_discovery_running,
+            $crate::commands::start_joystick_service_command,
+            $crate::commands::stop_joystick_service_command,
         ]
     };
 }
@@ -334,4 +343,36 @@ pub async fn is_discovery_running(
 ) -> Result<bool, DiscoveryError> {
     let service = discovery_service.lock().await;
     Ok(service.is_running())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn start_joystick_service_command(ws_port: u16, pi_addr: String) -> Result<(), String> {
+    let parsed: SocketAddr = pi_addr
+        .parse()
+        .map_err(|e| format!("Invalid PI address: {}", e))?;
+
+    // spawn the joystick service in background
+    let handle = tokio::spawn(async move {
+        joystick::start_joystick_service(ws_port, parsed).await;
+    });
+
+    // store the handle if not already set; ignore if already running
+    let _ = JOYSTICK_TASK.set(handle);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_joystick_service_command() -> Result<(), String> {
+    if let Some(handle) = JOYSTICK_TASK.get() {
+        // best-effort abort
+        handle.abort();
+        // drop the stored handle by replacing the OnceCell with a noop
+        // OnceCell has no remove, so we ignore further stops.
+        return Ok(());
+    }
+
+    Ok(())
 }

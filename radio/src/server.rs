@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
-use log::{debug, error, info, warn};
-use tokio_util::sync::CancellationToken;
+use log::{debug, error, info, trace, warn};
 use std::{io::ErrorKind, net::SocketAddr, sync::Arc, time::Duration};
 use telemetry::{CarConfiguration, ControlMessage};
 use tokio::{
@@ -8,6 +7,7 @@ use tokio::{
     sync::{Mutex, broadcast},
     time::timeout,
 };
+use tokio_util::sync::CancellationToken;
 
 use crate::{config::ConfigManager, discovery::DiscoveryService};
 
@@ -83,10 +83,12 @@ impl RadioServer {
     ) -> Result<()> {
         match message {
             ClientMessage::Control(control_msg) => {
-                // Broadcast control message to all subscribers (including UART/STM32 handler)
-                /* if let Err(e) = self.control_tx.send(control_msg.clone()) {
-                    error!("Failed to broadcast control message: {e}");
-                } */
+                // TODO: Broadcast control message to all UART
+                if self.control_tx.receiver_count() > 0 {
+                    let _ = self.control_tx.send(control_msg.clone());
+                } else {
+                    trace!("No control subscribers; skipping send");
+                }
                 debug!("Received control message: {control_msg:?}");
             }
             ClientMessage::ConfigUpdate { config } => {
@@ -188,7 +190,6 @@ impl RadioServer {
         );
 
         info!("Camera streaming is handled by UDP streamer on port 8080");
-        info!("WebSocket streaming is available on port 3030");
 
         {
             let mut discovery_service = self.discovery_service.lock().await;
@@ -202,7 +203,6 @@ impl RadioServer {
         info!("UDP server listening on 0.0.0.0:8080");
 
         let socket = Arc::new(socket);
-
         let mut buffer = vec![0u8; 65507]; // Max UDP payload size
 
         loop {
@@ -215,7 +215,7 @@ impl RadioServer {
                     match result {
                         Ok((len, client_addr)) => {
                             let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
-                            debug!("UDP message received from {client_addr}: {data_str}");
+                            trace!("UDP message received from {client_addr}: {data_str}");
 
                             // Add client to connected list if not already present
                             {
@@ -240,7 +240,29 @@ impl RadioServer {
                                 }
                             }
 
-                            // Parse and handle the message
+                            if len == 8 {
+                                let seq = u32::from_le_bytes([
+                                    buffer[0], buffer[1], buffer[2], buffer[3],
+                                ]);
+                                let left = i16::from_le_bytes([buffer[4], buffer[5]]);
+                                let right = i16::from_le_bytes([buffer[6], buffer[7]]);
+
+                                // Convert i16 -> -100..100 range for ControlMessage
+                                let steering = ((right as f32) / 32767.0_f32 * 100.0).round() as i8;
+                                let throttle = ((left as f32) / 32767.0_f32 * 100.0).round() as i8;
+
+                                let ctrl = ControlMessage { steering, throttle };
+                                debug!("Received joystick from {client_addr}: seq={} left={} right={} -> {:?}", seq, left, right, ctrl);
+
+                                if self.control_tx.receiver_count() > 0 {
+                                    let _ = self.control_tx.send(ctrl);
+                                } else {
+                                    debug!("No control subscribers; skipping send");
+                                }
+                                continue;
+                            }
+
+                            // Otherwise try to parse as JSON ClientMessage
                             let message_str = match std::str::from_utf8(&buffer[..len]) {
                                 Ok(s) => s,
                                 Err(e) => {

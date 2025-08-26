@@ -8,8 +8,7 @@
 
     export let size = 140; // px outer diameter
     export let knobSize = 56; // px knob diameter
-    export let deadzone = 0.04; // radius fraction below which input is considered zero (0..1)
-    export let clamp = 1.0; // allow clamping to 1.0
+    // minimal client-side joystick. Heavy math (deadzone/filter/mixing) is done in Rust.
 
     let root: HTMLDivElement | null = null;
     let rect: DOMRect | null = null;
@@ -32,54 +31,39 @@
         return () => ro.disconnect();
     });
 
-    function toNorm(pxX: number, pxY: number) {
-        if (!rect) return { nx: 0, ny: 0 };
-        const radius = (size - knobSize) / 2;
-        // compute relative to center
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = pxX - cx;
-        const dy = pyToCanvasY(pxY - cy); // invert Y so up is negative (forward)
-        // clamp to radius
-        const dist = Math.hypot(dx, dy);
-        const r = Math.min(dist, radius);
-        const nx = (dx / radius) * clamp;
-        const ny = (dy / radius) * clamp;
-        return { nx: nx, ny: ny, r, radius } as any;
-    }
+    // Note: we intentionally keep client-side math minimal. The Rust backend
+    // performs deadzone, filtering and control mixing. toNorm is removed.
 
     // convert pointer Y to UI Y where upward movement is negative (vehicle forward)
     function pyToCanvasY(v: number) {
         return -v;
     }
 
+    // Minimal mapping: set normalized -1..1 values and update knob position.
     function applyNormalized(nx: number, ny: number) {
-        // apply deadzone
-        const mag = Math.hypot(nx, ny);
-        if (mag < deadzone) {
-            nx = 0;
-            ny = 0;
-        }
+        // No deadzone/filter here; backend will handle heavy processing.
+        const nxClamped = Math.max(-1, Math.min(1, nx));
+        const nyClamped = Math.max(-1, Math.min(1, ny));
 
-        // clamp magnitude to 1
-        const m = Math.min(1, Math.hypot(nx, ny));
-        if (m > 0) {
-            nx = (nx / m) * Math.min(1, Math.hypot(nx, ny));
-            ny = (ny / m) * Math.min(1, Math.hypot(nx, ny));
-        }
+        x = Number(nxClamped.toFixed(3));
+        y = Number(nyClamped.toFixed(3));
 
-        x = Number(nx.toFixed(3));
-        y = Number(ny.toFixed(3));
-
-        // update knob px positions for rendering
+        // update knob px positions for rendering (simple linear mapping)
         const radiusPx = (size - knobSize) / 2;
         knobX = x * radiusPx;
         knobY = -y * radiusPx; // invert back for display (CSS top/left)
     }
 
     function pointerDown(e: PointerEvent) {
-        (e.target as Element).setPointerCapture(e.pointerId);
+        // capture on the element that the listener is bound to (currentTarget)
+        // using e.target can pick an inner child and cause incorrect capture behavior
+        // which in practice made center-press jump to the top.
+        updateRect();
+        try {
+            (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        } catch {}
         dragging = true;
+        dispatch("start");
         handlePointer(e.clientX, e.clientY);
     }
 
@@ -90,7 +74,7 @@
 
     function pointerUp(e: PointerEvent) {
         try {
-            (e.target as Element).releasePointerCapture(e.pointerId);
+            (e.currentTarget as Element).releasePointerCapture(e.pointerId);
         } catch {}
         dragging = false;
         // return to center smoothly
@@ -110,11 +94,12 @@
         const dx = px - cx;
         const dy = pyToCanvasY(py - cy);
         const radius = (size - knobSize) / 2;
-        // clamp
+        // clamp to radius in pixels then normalize to -1..1 for sending to backend
         const dist = Math.hypot(dx, dy);
         const clamped = dist > radius ? radius / dist : 1.0;
         const nx = (dx * clamped) / radius;
         const ny = (dy * clamped) / radius;
+        // apply minimal mapping and update UI; heavy math happens in Rust
         applyNormalized(nx, ny);
         dispatch("input", { x, y });
     }
@@ -129,10 +114,10 @@
     on:pointerup|preventDefault={pointerUp}
     on:pointercancel|preventDefault={pointerUp}>
     <div
-        class="relative flex items-center justify-center rounded-full border border-white/6 bg-white/4 backdrop-blur"
+        class="border-white/6 bg-white/4 relative flex items-center justify-center rounded-full border backdrop-blur"
         style="width: {size}px; height: {size}px;">
         <div
-            class="absolute flex items-center justify-center rounded-full border border-white/12 bg-white/8 shadow-[0_6px_14px_rgba(0,0,0,0.6),inset_0_-4px_8px_rgba(255,255,255,0.02)]"
+            class="border-white/12 bg-white/8 absolute flex items-center justify-center rounded-full border shadow-[0_6px_14px_rgba(0,0,0,0.6),inset_0_-4px_8px_rgba(255,255,255,0.02)]"
             style="width: {knobSize}px; height: {knobSize}px; left: calc(50% + {knobX}px); top: calc(50% + {knobY}px); transform: translate(-50%, -50%);">
             <!-- visual center dot -->
             <div class="h-2 w-2 rounded-full bg-white/20"></div>

@@ -11,6 +11,7 @@ use crate::discovery::DiscoveryService;
 pub mod commands;
 pub mod discovery;
 pub mod types;
+pub mod joystick;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +34,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
-                
+
                 let window = app
                     .get_webview_window("main")
                     .expect("Failed to get webview window");
