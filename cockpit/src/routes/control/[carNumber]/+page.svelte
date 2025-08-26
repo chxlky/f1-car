@@ -1,23 +1,26 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import { goto } from "$app/navigation";
     import { onMount, onDestroy } from "svelte";
     import { type ConnectionStatus, type F1Car, commands } from "$lib/bindings";
-    import Joystick from "$lib/components/Joystick.svelte";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
-    import { goto } from "$app/navigation";
+    import { startJoystickWs, closeJoystickWs, sendJoystickSample } from "$lib/services/joystickWs";
     import { ChevronLeft } from "@lucide/svelte";
     import { vibrate } from "@tauri-apps/plugin-haptics";
+    import Joystick from "$lib/components/Joystick.svelte";
 
     let { carNumber } = page.params;
 
     let car = $state<F1Car | null>(null);
     let connectionStatus = $state<ConnectionStatus>("Disconnected");
-    // control values derived from joysticks
-    let throttle = 0; // from left joystick Y (forward/back)
-    let steering = 0; // from right joystick X (left/right)
-    // websocket helper extracted to service
-    import { startJoystickWs, closeJoystickWs, sendJoystickSample } from "$lib/services/joystickWs";
-    let holdIntervalId: number | null = null;
+
+    let leftX = $state(0);
+    let leftY = $state(0); // throttle
+
+    let rightX = $state(0); // steering
+    let rightY = $state(0);
+
+    let holdIntervalId = $state<number | null>(null);
     const HOLD_SEND_HZ = 20; // send while held at 20Hz
 
     onMount(async () => {
@@ -33,22 +36,22 @@
 
                 if (car?.ip) {
                     const radioAddr = `${car.ip}:8080`;
-                    commands
-                        .startJoystickServiceCommand(9001, radioAddr)
+                    await commands
+                        .startJoystickService(9001, radioAddr)
                         .then((res) => {
                             if (res.status === "error") {
                                 console.error("Failed to start joystick service:", res.error);
                             } else {
                                 console.log("Joystick service started for", radioAddr);
                             }
+
+                            // open a local websocket to the Tauri joystick service so UI samples get forwarded
+                            startJoystickWs();
                         })
                         .catch((e: unknown) =>
                             console.error("Failed to start joystick service:", e)
                         );
                 }
-
-                // open a local websocket to the Tauri joystick service so UI samples get forwarded
-                startJoystickWs(9001);
 
                 await connect().then(() => console.log("Connected to car", car?.number));
             })
@@ -69,20 +72,22 @@
                 console.error("Error setting orientation to Portrait");
             });
 
-        try {
-            if (car) {
-                await commands.disconnectCar(car.id).then(async () => {
+        if (car) {
+            await commands
+                .disconnectCar(car.id)
+                .then(async () => {
                     connectionStatus = "Disconnected";
 
                     await disconnect();
+                })
+                .catch((err) => {
+                    console.error("Error disconnecting on destroy:", err);
                 });
-            }
-        } catch (err) {
-            console.error("Error disconnecting on destroy:", err);
         }
 
         // close local joystick websocket
         closeJoystickWs();
+
         // clear any hold interval
         if (holdIntervalId != null) {
             clearInterval(holdIntervalId);
@@ -128,12 +133,9 @@
                         console.error("Failed to set orientation to Portrait on back:", e);
                     });
 
-                    // best-effort stop the Rust joystick service
-                    try {
-                        await commands.stopJoystickServiceCommand();
-                    } catch (e) {
+                    await commands.stopJoystickService().catch((e) => {
                         console.warn("Failed to stop joystick service via commands API:", e);
-                    }
+                    });
 
                     // close local joystick websocket (JS sender)
                     try {
@@ -142,8 +144,7 @@
                         console.warn("Error closing joystick WS on back:", e);
                     }
 
-                    await vibrate(100);
-                    goto("/#/");
+                    await vibrate(100).then(() => goto("/#"));
                 }}>
                 <ChevronLeft />
             </button>
@@ -171,25 +172,26 @@
     <div class="absolute bottom-6 left-6">
         <Joystick
             size={200}
-            on:start={() => {
+            knobSize={56}
+            x={leftX}
+            y={leftY}
+            start={() => {
                 // begin periodic sends while held
                 if (holdIntervalId == null) {
                     holdIntervalId = setInterval(
-                        () => sendJoystickSample(steering, throttle),
+                        () => sendJoystickSample(rightX, leftY),
                         1000 / HOLD_SEND_HZ
                     ) as unknown as number;
                 }
             }}
-            on:input={(event) => {
-                const { y } = event.detail; // left joystick controls throttle
-                throttle = y;
-                sendJoystickSample(steering, throttle);
-                // send or process throttle as needed; keep light on frontend
-                // console.log("throttle (left joystick)", throttle);
+            input={(_x, y) => {
+                leftY = y;
+                sendJoystickSample(rightX, leftY);
             }}
-            on:end={() => {
-                throttle = 0;
-                sendJoystickSample(steering, throttle);
+            end={() => {
+                leftY = 0;
+                sendJoystickSample(rightX, leftY);
+
                 // stop periodic sends
                 if (holdIntervalId != null) {
                     clearInterval(holdIntervalId);
@@ -201,23 +203,25 @@
     <div class="absolute bottom-6 right-6">
         <Joystick
             size={200}
-            on:start={() => {
+            knobSize={56}
+            x={rightX}
+            y={rightY}
+            start={() => {
                 if (holdIntervalId == null) {
                     holdIntervalId = setInterval(
-                        () => sendJoystickSample(steering, throttle),
+                        () => sendJoystickSample(rightX, leftY),
                         1000 / HOLD_SEND_HZ
                     ) as unknown as number;
                 }
             }}
-            on:input={(event) => {
-                const { x } = event.detail; // right joystick controls steering
-                steering = x;
-                sendJoystickSample(steering, throttle);
-                // console.log("steering (right joystick)", steering);
+            input={(x, _y) => {
+                rightX = x;
+                sendJoystickSample(rightX, leftY);
             }}
-            on:end={() => {
-                steering = 0;
-                sendJoystickSample(steering, throttle);
+            end={() => {
+                rightX = 0;
+                sendJoystickSample(rightX, leftY);
+
                 if (holdIntervalId != null) {
                     clearInterval(holdIntervalId);
                     holdIntervalId = null;

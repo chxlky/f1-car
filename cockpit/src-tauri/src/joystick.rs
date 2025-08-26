@@ -3,7 +3,11 @@ use std::time::{Duration, Instant};
 
 use futures::StreamExt;
 use log::{error, info};
+use tokio::net::{TcpListener, UdpSocket};
 use tokio::sync::mpsc::{self, error::TrySendError, Receiver};
+use tokio::sync::watch;
+use tokio::task::JoinHandle;
+use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Clone, Copy)]
@@ -14,80 +18,101 @@ pub struct Sample {
     pub seq: u32,
 }
 
-/// Start the joystick service: spawn a websocket server on `ws_port` and
-/// forward processed control packets to `pi_addr` over UDP.
-pub async fn start_joystick_service(ws_port: u16, pi_addr: SocketAddr) {
-    // bounded channel capacity
+pub async fn start_joystick_service(
+    ws_port: u16,
+    pi_addr: SocketAddr,
+    mut shutdown_rx: watch::Receiver<bool>,
+) {
     let (tx, rx) = mpsc::channel::<Sample>(512);
 
-    // spawn processor task
     tokio::spawn(processor_task(rx, pi_addr));
 
-    // spawn websocket server task
     let bind_addr = format!("127.0.0.1:{}", ws_port);
-    let listener = match tokio::net::TcpListener::bind(&bind_addr).await {
+    let listener = match TcpListener::bind(&bind_addr).await {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("Failed to bind websocket listener {}: {}", bind_addr, e);
+            error!("Failed to bind websocket listener {}: {}", bind_addr, e);
             return;
         }
     };
 
-    println!("joystick ws listening on {}", bind_addr);
+    info!("joystick ws listening on {}", bind_addr);
+
+    // keep track of spawned client tasks so we can abort them on shutdown
+    let mut client_handles: Vec<JoinHandle<()>> = Vec::new();
 
     loop {
-        match listener.accept().await {
-            Ok((stream, addr)) => {
-                let tx = tx.clone();
-                tokio::spawn(async move {
-                    if let Ok(ws_stream) = tokio_tungstenite::accept_async(stream).await {
-                        let mut ws = ws_stream;
-                        println!("joystick client connected: {}", addr);
-                        while let Some(msg) = ws.next().await {
-                            match msg {
-                                Ok(Message::Binary(b)) if b.len() >= 4 => {
-                                    // log raw bytes received from websocket client for debugging
-                                    info!("WS binary recv len={} bytes={:02x?}", b.len(), &b);
-                                    let xi = i16::from_le_bytes([b[0], b[1]]);
-                                    let yi = i16::from_le_bytes([b[2], b[3]]);
-                                    info!("WS parsed xi={} yi={}", xi, yi);
-                                    let xf = (xi as f32) / 32767.0;
-                                    let yf = (yi as f32) / 32767.0;
-                                    let sample = Sample {
-                                        ts: Instant::now(),
-                                        x: xf,
-                                        y: yf,
-                                        seq: 0,
-                                    };
-                                    // try to enqueue, drop on full
-                                    match tx.try_send(sample) {
-                                        Ok(_) => {}
-                                        Err(TrySendError::Full(_)) => {
-                                            // queue full: drop sample
+        tokio::select! {
+            accept = listener.accept() => {
+                match accept {
+                    Ok((stream, addr)) => {
+                        let tx = tx.clone();
+                        let handle = tokio::spawn(async move {
+                            if let Ok(ws_stream) = accept_async(stream).await {
+                                let mut ws = ws_stream;
+                                info!("joystick client connected: {}", addr);
+                                while let Some(msg) = ws.next().await {
+                                    match msg {
+                                        Ok(Message::Binary(b)) if b.len() >= 4 => {
+                                            // info!("WS binary recv len={} bytes={:02x?}", b.len(), &b);
+                                            let xi = i16::from_le_bytes([b[0], b[1]]);
+                                            let yi = i16::from_le_bytes([b[2], b[3]]);
+
+                                            // info!("WS parsed xi={} yi={}", xi, yi);
+
+                                            let xf = (xi as f32) / 32767.0;
+                                            let yf = (yi as f32) / 32767.0;
+
+                                            let sample = Sample {
+                                                ts: Instant::now(),
+                                                x: xf,
+                                                y: yf,
+                                                seq: 0,
+                                            };
+
+                                            // try to enqueue, drop on full
+                                            match tx.try_send(sample) {
+                                                Ok(_) => {}
+                                                Err(TrySendError::Full(_)) => {
+                                                    // queue full: drop sample
+                                                }
+                                                Err(TrySendError::Closed(_)) => break,
+                                            }
                                         }
-                                        Err(TrySendError::Closed(_)) => break,
+                                        Ok(Message::Close(_)) | Err(_) => break,
+                                        _ => {}
                                     }
                                 }
-                                Ok(Message::Close(_)) | Err(_) => break,
-                                _ => {}
                             }
-                        }
+                        });
+                        client_handles.push(handle);
                     }
-                });
+                    Err(e) => {
+                        error!("accept error: {}", e);
+                    }
+                }
             }
-            Err(e) => {
-                eprintln!("accept error: {}", e);
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    info!("joystick shutdown requested");
+                    // abort all client handlers so their tx clones drop
+                    for h in client_handles.iter() {
+                        h.abort();
+                    }
+                    // drop our own tx so the processor receives None and can send final idle
+                    drop(tx);
+                    break;
+                }
             }
         }
     }
 }
 
 async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
-    // UDP socket used to send control packets to Pi
-    let udp = match tokio::net::UdpSocket::bind("0.0.0.0:0").await {
+    let udp = match UdpSocket::bind("0.0.0.0:0").await {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Failed to bind UDP socket: {}", e);
+            error!("Failed to bind UDP socket: {}", e);
             return;
         }
     };
@@ -95,7 +120,6 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
     let mut seq: u32 = 0;
     let mut last_sample_time = Instant::now();
 
-    // filter state
     let mut last_x = 0.0f32;
     let mut last_y = 0.0f32;
     let alpha = 0.12f32; // low-pass factor
@@ -120,10 +144,6 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                         last_x = alpha * x + (1.0 - alpha) * last_x;
                         last_y = alpha * y + (1.0 - alpha) * last_y;
 
-                        // Direct mapping: treat sample.y as throttle (left UDP field)
-                        // and sample.x as steering (right UDP field). This keeps
-                        // UI joysticks independent: left UI controls `throttle` and
-                        // right UI controls `steering` (as wired in the frontend).
                         let left = last_y;   // throttle
                         let right = last_x;  // steering
 
@@ -137,7 +157,6 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                         buf[4..6].copy_from_slice(&li.to_le_bytes());
                         buf[6..8].copy_from_slice(&ri.to_le_bytes());
 
-                        // log the packet details before sending so the rust console shows
                         info!("Sending joystick packet seq={} li={} ri={} bytes={:02x?}", seq, li, ri, &buf);
                         if let Err(e) = udp.send_to(&buf, &pi_addr).await {
                             error!("UDP send error: {}", e);

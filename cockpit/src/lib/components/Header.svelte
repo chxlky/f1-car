@@ -13,9 +13,7 @@
             <button
                 class="z-50 rounded-full p-2 transition-all hover:bg-gray-700 active:scale-95 active:bg-gray-500"
                 onclick={async () => {
-                    await vibrate(100).then(() => {
-                        console.log("Vibration completed");
-                    });
+                    await vibrate(100);
                     console.log("Refresh clicked");
                     f1DiscoveryService.refreshCars();
                 }}>

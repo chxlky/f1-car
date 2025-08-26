@@ -10,8 +10,8 @@ use crate::discovery::DiscoveryService;
 
 pub mod commands;
 pub mod discovery;
-pub mod types;
 pub mod joystick;
+pub mod types;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {

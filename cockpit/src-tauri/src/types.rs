@@ -8,6 +8,19 @@ use specta::Type;
 use tauri_specta::Event;
 pub use telemetry::{CarStatus, ConnectionStatus, F1Car};
 
+#[macro_export]
+macro_rules! collect_events {
+    () => {
+        specta_collect_events![
+            $crate::types::CarDiscoveredEvent,
+            $crate::types::CarUpdatedEvent,
+            $crate::types::CarOfflineEvent,
+            $crate::types::CarRemovedEvent,
+            $crate::types::DiscoveryStatusEvent,
+        ]
+    };
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 pub struct CarDiscoveredEvent {
     pub car: F1Car,

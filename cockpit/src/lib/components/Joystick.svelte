@@ -1,24 +1,23 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import { onMount } from "svelte";
 
-    // TODO: Update to svelte 5
+    interface Props {
+        size: number;
+        knobSize: number;
+        x: number;
+        y: number;
+        start: () => void;
+        input: (x: number, y: number) => void;
+        end: () => void;
+    }
 
-    const dispatch = createEventDispatcher();
+    let { size = 140, knobSize = 56, x = 0, y = 0, start, input, end }: Props = $props();
 
-    export let size = 140; // px outer diameter
-    export let knobSize = 56; // px knob diameter
-    // minimal client-side joystick. Heavy math (deadzone/filter/mixing) is done in Rust.
-
-    let root: HTMLDivElement | null = null;
-    let rect: DOMRect | null = null;
-    let dragging = false;
-    let knobX = 0; // in px relative to center
-    let knobY = 0;
-
-    // normalized values -1..1 (x => left(-1) right(+1), y => forward(-1) back(+1))
-    export let x = 0;
-    export let y = 0;
+    let root = $state<HTMLDivElement | null>(null);
+    let rect = $state<DOMRect | null>(null);
+    let dragging = $state(false);
+    let knobX = $state(0); // in px relative to center
+    let knobY = $state(0); // in px relative to center
 
     function updateRect() {
         if (root) rect = root.getBoundingClientRect();
@@ -31,9 +30,6 @@
         return () => ro.disconnect();
     });
 
-    // Note: we intentionally keep client-side math minimal. The Rust backend
-    // performs deadzone, filtering and control mixing. toNorm is removed.
-
     // convert pointer Y to UI Y where upward movement is negative (vehicle forward)
     function pyToCanvasY(v: number) {
         return -v;
@@ -41,7 +37,6 @@
 
     // Minimal mapping: set normalized -1..1 values and update knob position.
     function applyNormalized(nx: number, ny: number) {
-        // No deadzone/filter here; backend will handle heavy processing.
         const nxClamped = Math.max(-1, Math.min(1, nx));
         const nyClamped = Math.max(-1, Math.min(1, ny));
 
@@ -55,6 +50,8 @@
     }
 
     function pointerDown(e: PointerEvent) {
+        e.preventDefault();
+
         // capture on the element that the listener is bound to (currentTarget)
         // using e.target can pick an inner child and cause incorrect capture behavior
         // which in practice made center-press jump to the top.
@@ -63,16 +60,20 @@
             (e.currentTarget as Element).setPointerCapture(e.pointerId);
         } catch {}
         dragging = true;
-        dispatch("start");
+
+        start();
         handlePointer(e.clientX, e.clientY);
     }
 
     function pointerMove(e: PointerEvent) {
+        e.preventDefault();
         if (!dragging) return;
         handlePointer(e.clientX, e.clientY);
     }
 
     function pointerUp(e: PointerEvent) {
+        e.preventDefault();
+
         try {
             (e.currentTarget as Element).releasePointerCapture(e.pointerId);
         } catch {}
@@ -82,8 +83,9 @@
         knobY = 0;
         x = 0;
         y = 0;
-        dispatch("input", { x, y });
-        dispatch("end");
+        input(x, y);
+
+        end();
     }
 
     function handlePointer(px: number, py: number) {
@@ -101,7 +103,7 @@
         const ny = (dy * clamped) / radius;
         // apply minimal mapping and update UI; heavy math happens in Rust
         applyNormalized(nx, ny);
-        dispatch("input", { x, y });
+        input(x, y);
     }
 </script>
 
@@ -109,10 +111,10 @@
     bind:this={root}
     class="touch-none select-none"
     style="width: {size}px; height: {size}px;"
-    on:pointerdown|preventDefault={pointerDown}
-    on:pointermove|preventDefault={pointerMove}
-    on:pointerup|preventDefault={pointerUp}
-    on:pointercancel|preventDefault={pointerUp}>
+    onpointerdown={pointerDown}
+    onpointermove={pointerMove}
+    onpointerup={pointerUp}
+    onpointercancel={pointerUp}>
     <div
         class="border-white/6 bg-white/4 relative flex items-center justify-center rounded-full border backdrop-blur"
         style="width: {size}px; height: {size}px;">

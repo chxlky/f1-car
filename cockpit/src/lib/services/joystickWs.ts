@@ -1,4 +1,3 @@
-// WebSocket client helper for the local Tauri joystick service.
 let ws: WebSocket | null = null;
 let wsRetryTimer: number | null = null;
 let wsConnectAttempts = 0;
@@ -81,17 +80,20 @@ export function closeJoystickWs() {
     }
 }
 
-// send steering/throttle as two int16 little-endian values
 export function sendJoystickSample(steering: number, throttle: number) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
     const xi = Math.max(-1, Math.min(1, steering));
     const yi = Math.max(-1, Math.min(1, throttle));
     const si = Math.round(xi * 32767);
     const ti = Math.round(yi * 32767);
+
     const buf = new ArrayBuffer(4);
     const dv = new DataView(buf);
+
     dv.setInt16(0, si, true);
     dv.setInt16(2, ti, true);
+
     try {
         ws.send(buf);
     } catch (err) {

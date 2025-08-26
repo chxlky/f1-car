@@ -127,7 +127,7 @@ export class F1CarDiscoveryService {
             .then((res) => {
                 if (res.status === "error") {
                     console.error(
-                        `Failed to check running status: ${res.error?.message ?? res.error}`
+                        `Failed to check running status: ${res.error}`
                     );
                     this.isRunning = false;
                     return false;

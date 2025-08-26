@@ -252,7 +252,7 @@ impl RadioServer {
                                 let throttle = ((left as f32) / 32767.0_f32 * 100.0).round() as i8;
 
                                 let ctrl = ControlMessage { steering, throttle };
-                                debug!("Received joystick from {client_addr}: seq={} left={} right={} -> {:?}", seq, left, right, ctrl);
+                                debug!("Received joystick from {client_addr}: seq={} {:?}", seq, ctrl);
 
                                 if self.control_tx.receiver_count() > 0 {
                                     let _ = self.control_tx.send(ctrl);

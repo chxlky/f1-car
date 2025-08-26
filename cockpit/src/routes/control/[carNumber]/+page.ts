@@ -2,7 +2,7 @@ import type { PageLoad } from "./$types";
 import { redirect } from "@sveltejs/kit";
 import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
 
-export const load = (async ({ params }: { params: Record<string, string> }) => {
+export const load = (async ({ params }) => {
     const num = Number(params.carNumber);
     if (Number.isNaN(num)) throw redirect(302, "/");
 
