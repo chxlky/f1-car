@@ -60,11 +60,7 @@ impl Accelerometer {
         Ok(())
     }
 
-    pub fn start_poller(
-        self,
-        cancel_token: CancellationToken,
-        interval_ms: u64,
-    ) -> JoinHandle<()> {
+    pub fn start_poller(self, cancel_token: CancellationToken, interval_ms: u64) -> JoinHandle<()> {
         thread::spawn(move || {
             let mut dev = self;
             while !cancel_token.is_cancelled() {

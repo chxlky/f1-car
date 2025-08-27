@@ -84,11 +84,6 @@ impl RadioServer {
         match message {
             ClientMessage::Control(control_msg) => {
                 // TODO: Broadcast control message to all UART
-                if self.control_tx.receiver_count() > 0 {
-                    let _ = self.control_tx.send(control_msg.clone());
-                } else {
-                    trace!("No control subscribers; skipping send");
-                }
                 debug!("Received control message: {control_msg:?}");
             }
             ClientMessage::ConfigUpdate { config } => {
@@ -257,7 +252,7 @@ impl RadioServer {
                                 if self.control_tx.receiver_count() > 0 {
                                     let _ = self.control_tx.send(ctrl);
                                 } else {
-                                    debug!("No control subscribers; skipping send");
+                                    trace!("No control subscribers; skipping send");
                                 }
                                 continue;
                             }

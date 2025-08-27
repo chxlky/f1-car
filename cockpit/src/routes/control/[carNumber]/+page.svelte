@@ -5,9 +5,11 @@
     import { type ConnectionStatus, type F1Car, commands } from "$lib/bindings";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import { startJoystickWs, closeJoystickWs, sendJoystickSample } from "$lib/services/joystickWs";
+    import { startCamera, stopCamera } from "$lib/services/camera";
     import { ChevronLeft } from "@lucide/svelte";
     import { vibrate } from "@tauri-apps/plugin-haptics";
     import Joystick from "$lib/components/Joystick.svelte";
+    import VideoStream from "$lib/components/VideoStream.svelte";
 
     let { carNumber } = page.params;
 
@@ -22,6 +24,8 @@
 
     let holdIntervalId = $state<number | null>(null);
     const HOLD_SEND_HZ = 20; // send while held at 20Hz
+
+    let isStreaming = $state<boolean>(false);
 
     onMount(async () => {
         await commands
@@ -53,11 +57,26 @@
                         );
                 }
 
-                await connect().then(() => console.log("Connected to car", car?.number));
+                await connect().then(() => {
+                    connectionStatus = "Connected";
+                    console.log("Connected to car", car?.number);
+                });
             })
             .catch(() => {
                 console.error("Error setting orientation to Landscape");
             });
+
+        // Start camera stream automatically
+        if (car?.ip) {
+            console.log("Starting camera stream for", car.ip);
+            const result = await startCamera(car.ip);
+            console.log("startCamera result:", result);
+            if (result.success) {
+                isStreaming = true;
+            } else {
+                console.error("Failed to start camera stream:", result);
+            }
+        }
     });
 
     onDestroy(async () => {
@@ -92,6 +111,14 @@
         if (holdIntervalId != null) {
             clearInterval(holdIntervalId);
             holdIntervalId = null;
+        }
+
+        // Stop camera stream automatically
+        if (car?.ip) {
+            const result = await stopCamera(car.ip);
+            if (result.success) {
+                isStreaming = false;
+            }
         }
     });
 
@@ -168,6 +195,12 @@
             </div>
         </div>
     </div>
+
+    {#if isStreaming && car?.ip}
+        <div class="absolute left-1/2 top-20 -translate-x-1/2 transform">
+            <VideoStream streamUrl={`http://${car.ip}:8081/stream`} />
+        </div>
+    {/if}
 
     <div class="absolute bottom-6 left-6">
         <Joystick

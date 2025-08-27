@@ -10,7 +10,7 @@ mod discovery;
 mod server;
 
 use crate::accelerometer::Accelerometer;
-use crate::{camera::UdpStreamer, server::RadioServer};
+use crate::{camera::MjpegStreamer, server::RadioServer};
 
 async fn shutdown_poll(token: CancellationToken, handle: Option<JoinHandle<()>>) {
     token.cancel();
@@ -54,7 +54,7 @@ async fn main() {
 
     // Start UDP camera streamer
     tokio::spawn(async move {
-        match UdpStreamer::new().await {
+        match MjpegStreamer::new().await {
             Ok(mut streamer) => {
                 info!("UDP camera streamer initialized");
                 if let Err(e) = streamer.start().await {
