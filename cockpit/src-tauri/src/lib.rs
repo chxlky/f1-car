@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use log::LevelFilter;
 use tauri::{Manager, Wry};
 use tauri_specta::{
     collect_commands as specta_collect_commands, collect_events as specta_collect_events, Builder,
@@ -31,7 +32,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
+                        .level(LevelFilter::Info)
                         .build(),
                 )?;
 

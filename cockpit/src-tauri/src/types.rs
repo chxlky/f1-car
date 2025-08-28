@@ -37,11 +37,13 @@ pub struct CarOfflineEvent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "camelCase")]
 pub struct CarRemovedEvent {
     pub car_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveryStatusEvent {
     pub is_running: bool,
     pub message: String,

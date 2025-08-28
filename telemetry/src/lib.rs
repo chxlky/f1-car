@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -25,6 +27,7 @@ impl Default for CarConfiguration {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct F1Car {
     pub id: String,
     pub number: u32,
@@ -34,7 +37,7 @@ pub struct F1Car {
     pub port: u16,
     pub version: String,
     pub connection_status: ConnectionStatus,
-    pub last_seen: Option<std::time::SystemTime>,
+    pub last_seen: Option<SystemTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]

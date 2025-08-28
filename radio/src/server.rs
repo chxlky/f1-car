@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use log::{debug, error, info, trace, warn};
+use serde::{Deserialize, Serialize};
 use std::{io::ErrorKind, net::SocketAddr, sync::Arc, time::Duration};
 use telemetry::{CarConfiguration, ControlMessage};
 use tokio::{
@@ -11,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{config::ConfigManager, discovery::DiscoveryService};
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 enum ClientMessage {
     #[serde(rename = "control")]
@@ -24,7 +25,7 @@ enum ClientMessage {
     Ping { timestamp: u64 },
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(Serialize, Debug)]
 #[serde(tag = "type")]
 enum ServerMessage {
     #[serde(rename = "config")]

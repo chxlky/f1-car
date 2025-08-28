@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 
 use futures::StreamExt;
-use log::{error, info};
+use log::{error, debug, info};
 use tokio::net::{TcpListener, UdpSocket};
 use tokio::sync::mpsc::{self, error::TrySendError, Receiver};
 use tokio::sync::watch;
@@ -157,7 +157,7 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                         buf[4..6].copy_from_slice(&li.to_le_bytes());
                         buf[6..8].copy_from_slice(&ri.to_le_bytes());
 
-                        info!("Sending joystick packet seq={} li={} ri={} bytes={:02x?}", seq, li, ri, &buf);
+                        debug!("Sending joystick packet seq={} li={} ri={} bytes={:02x?}", seq, li, ri, &buf);
                         if let Err(e) = udp.send_to(&buf, &pi_addr).await {
                             error!("UDP send error: {}", e);
                         }
@@ -168,7 +168,7 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                         // channel closed; send safe/idle packet then exit
                         // send a final idle packet
                         let idle = [0u8;8];
-                        info!("Sending final idle packet bytes={:02x?}", &idle);
+                        debug!("Sending final idle packet bytes={:02x?}", &idle);
                         let _ = udp.send_to(&idle, &pi_addr).await;
                         break;
                     }

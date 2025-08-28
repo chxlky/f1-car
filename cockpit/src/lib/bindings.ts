@@ -120,12 +120,12 @@ discoveryStatusEvent: "discovery-status-event"
 
 export type CarDiscoveredEvent = { car: F1Car }
 export type CarOfflineEvent = { car: F1Car }
-export type CarRemovedEvent = { car_id: string }
+export type CarRemovedEvent = { carId: string }
 export type CarUpdatedEvent = { car: F1Car }
 export type ConnectionStatus = "Disconnected" | "Connecting" | "Connected" | { Failed: string }
 export type DiscoveryError = { code: string; message: string }
-export type DiscoveryStatusEvent = { is_running: boolean; message: string }
-export type F1Car = { id: string; number: number; driver: string; team: string; ip: string; port: number; version: string; connection_status: ConnectionStatus; last_seen: SystemTime | null }
+export type DiscoveryStatusEvent = { isRunning: boolean; message: string }
+export type F1Car = { id: string; number: number; driver: string; team: string; ip: string; port: number; version: string; connectionStatus: ConnectionStatus; lastSeen: SystemTime | null }
 export type Orientation = "Portrait" | "Landscape"
 export type SystemTime = { duration_since_epoch: number; duration_since_unix_epoch: number }
 

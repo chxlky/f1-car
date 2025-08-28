@@ -136,7 +136,7 @@
 
         await f1DiscoveryService.getCarById(car.id).then((car) => {
             f1DiscoveryService.selectedConnection =
-                (car?.connection_status as any) === "Connected" ? "Connected" : "Connecting";
+                car?.connectionStatus === "Connected" ? "Connected" : "Connecting";
         });
     }
 

@@ -10,7 +10,7 @@ use log::{debug, error, info, warn};
 use mdns_sd::{ServiceDaemon, ServiceEvent};
 use tauri::AppHandle;
 use tauri_specta::Event;
-use telemetry::SERVICE_TYPE;
+use telemetry::{ConnectionStatus, SERVICE_TYPE};
 use tokio::{task::JoinHandle, time};
 
 use crate::types::{
@@ -183,7 +183,7 @@ impl DiscoveryService {
                     .get_property_val_str("version")
                     .unwrap_or("Unknown")
                     .to_string(),
-                connection_status: crate::types::ConnectionStatus::Disconnected,
+                connection_status: ConnectionStatus::Disconnected,
                 last_seen: None,
             };
 

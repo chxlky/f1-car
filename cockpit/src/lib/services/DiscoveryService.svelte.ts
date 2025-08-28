@@ -8,6 +8,9 @@ import {
     type F1Car
 } from "../bindings";
 
+// TODO: when the car is turned off, and refresh is called, the old car still persists
+// we need to clear any cars when refresh is called.
+
 export class F1CarDiscoveryService {
     cars = $state(new Map<string, F1Car>());
     selectedCarId = $state<string | undefined>(undefined);
@@ -24,7 +27,7 @@ export class F1CarDiscoveryService {
             this.selectedConnection = "Disconnected";
         } else {
             const car = this.cars.get(carId);
-            this.selectedConnection = car?.connection_status ?? "Disconnected";
+            this.selectedConnection = car?.connectionStatus ?? "Disconnected";
         }
     }
 
@@ -74,12 +77,16 @@ export class F1CarDiscoveryService {
     async refreshCars(): Promise<F1Car[]> {
         try {
             this.error = undefined;
+
+            // Clear existing cars before refreshing to remove stale entries
+            this.cars.clear();
+
             await commands.getDiscoveredCars().then((res) => {
                 if (res.status === "error") {
                     throw new Error(`Failed to refresh cars: ${res.error.message}`);
                 }
 
-                this.cars.clear();
+                // Add only the currently discovered cars
                 res.data.forEach((car) => this.cars.set(car.id, car));
 
                 // notify listeners with the derived array and count
@@ -126,9 +133,7 @@ export class F1CarDiscoveryService {
             .isDiscoveryRunning()
             .then((res) => {
                 if (res.status === "error") {
-                    console.error(
-                        `Failed to check running status: ${res.error}`
-                    );
+                    console.error(`Failed to check running status: ${res.error}`);
                     this.isRunning = false;
                     return false;
                 }
@@ -184,7 +189,7 @@ export class F1CarDiscoveryService {
             this.cars.set(data.car.id, data.car);
             // if this is the selected car, update connection state
             if (this.selectedCarId === data.car.id) {
-                this.selectedConnection = data.car.connection_status;
+                this.selectedConnection = data.car.connectionStatus;
             }
             // notify listeners with the updated derived list/count
             this.notifyCarListeners();
@@ -197,7 +202,7 @@ export class F1CarDiscoveryService {
             const data = event.payload;
             this.cars.set(data.car.id, data.car);
             if (this.selectedCarId === data.car.id) {
-                this.selectedConnection = data.car.connection_status;
+                this.selectedConnection = data.car.connectionStatus;
             }
             this.notifyCarListeners();
             console.log(`mDNS: Car updated: id=${data.car.id} #${data.car.number}`);
@@ -208,7 +213,7 @@ export class F1CarDiscoveryService {
             if (this.cars.has(data.car.id)) {
                 this.cars.set(data.car.id, data.car);
                 if (this.selectedCarId === data.car.id) {
-                    this.selectedConnection = data.car.connection_status;
+                    this.selectedConnection = data.car.connectionStatus;
                 }
                 this.notifyCarListeners();
                 console.log(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
@@ -217,19 +222,19 @@ export class F1CarDiscoveryService {
 
         const unlistenRemoved = await events.carRemovedEvent.listen((event) => {
             const data = event.payload;
-            this.cars.delete(data.car_id);
+            this.cars.delete(data.carId);
             // clear selection if the removed car was selected
-            if (this.selectedCarId === data.car_id) {
+            if (this.selectedCarId === data.carId) {
                 this.selectCar(undefined);
             }
             this.notifyCarListeners();
-            console.log(`mDNS: Car removed: ${data.car_id}`);
+            console.log(`mDNS: Car removed: ${data.carId}`);
         });
 
         const unlistenStatus = await events.discoveryStatusEvent.listen((event) => {
             const data = event.payload;
-            console.log(`Discovery status: ${data.message} (running: ${data.is_running})`);
-            this.isRunning = data.is_running;
+            console.log(`Discovery status: ${data.message} (running: ${data.isRunning})`);
+            this.isRunning = data.isRunning;
             this.notifyStatusListeners(data);
         });
 

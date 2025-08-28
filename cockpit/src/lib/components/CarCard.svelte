@@ -15,7 +15,7 @@
     const lastName = lastNameParts.join(" ");
 
     let remoteCar = $derived(f1DiscoveryService.cars.get(car.id));
-    let isConnectedRemote = $derived(remoteCar!.connection_status === "Connected");
+    let isConnectedRemote = $derived(remoteCar!.connectionStatus === "Connected");
 </script>
 
 <div

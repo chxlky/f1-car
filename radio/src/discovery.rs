@@ -7,7 +7,7 @@ use mdns_sd::{ServiceDaemon, ServiceInfo};
 use tokio::sync::Mutex;
 
 use crate::config::ConfigManager;
-use telemetry::F1Car;
+use telemetry::{ConnectionStatus, F1Car};
 
 pub struct DiscoveryService {
     mdns: ServiceDaemon,
@@ -92,7 +92,7 @@ impl DiscoveryService {
             ip: local_ip.to_string(),
             port,
             version: version.clone(),
-            connection_status: telemetry::ConnectionStatus::Disconnected,
+            connection_status: ConnectionStatus::Disconnected,
             last_seen: None,
         };
 
