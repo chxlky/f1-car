@@ -3,10 +3,10 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use axum::{
     Router,
-    body::Body,
+    body::{Body, Bytes},
     extract::Query,
     http::{Response, StatusCode},
     response::IntoResponse,
@@ -18,9 +18,9 @@ use tokio::net::TcpListener;
 use tokio_stream::{StreamExt, wrappers::IntervalStream};
 use tower_http::cors::{Any, CorsLayer};
 
-use super::CameraCapture;
+use crate::camera::FrameBuffer;
 
-type FrameBuffer = Arc<Mutex<Option<Vec<u8>>>>;
+use super::CameraCapture;
 
 #[derive(Deserialize)]
 struct StreamQuery {
@@ -110,22 +110,19 @@ impl MjpegStreamer {
                                     async move {
                                         if let Ok(frame_lock) = buffer.lock() {
                                             if let Some(frame) = &*frame_lock {
-                                                let part_header =
-                                                    b"--frame\r\nContent-Type: image/jpeg\r\n\r\n";
-                                                let part_footer = b"\r\n";
+                                                const PART_HEADER: &[u8] = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n";
+                                                const PART_FOOTER: &[u8] = b"\r\n";
 
                                                 let mut data = Vec::with_capacity(
-                                                    part_header.len()
+                                                    PART_HEADER.len()
                                                         + frame.len()
-                                                        + part_footer.len(),
+                                                        + PART_FOOTER.len(),
                                                 );
-                                                data.extend_from_slice(part_header);
+                                                data.extend_from_slice(PART_HEADER);
                                                 data.extend_from_slice(frame);
-                                                data.extend_from_slice(part_footer);
+                                                data.extend_from_slice(PART_FOOTER);
 
-                                                Some(Ok::<_, anyhow::Error>(
-                                                    axum::body::Bytes::from(data),
-                                                ))
+                                                Some(Ok::<_, Error>(Bytes::from(data)))
                                             } else {
                                                 None
                                             }

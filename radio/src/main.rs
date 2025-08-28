@@ -52,7 +52,6 @@ async fn main() {
         .take()
         .map(|a| a.start_poller(cancel_token.clone(), 100));
 
-    // Start UDP camera streamer
     tokio::spawn(async move {
         match MjpegStreamer::new().await {
             Ok(mut streamer) => {

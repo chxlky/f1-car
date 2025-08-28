@@ -9,9 +9,11 @@ use tokio::{
     time::sleep,
 };
 
+use crate::camera::FrameBuffer;
+
 #[derive(Clone)]
 pub struct CameraCapture {
-    frame_buffer: Arc<Mutex<Option<Vec<u8>>>>,
+    frame_buffer: FrameBuffer,
     is_running: Arc<Mutex<bool>>,
 }
 
@@ -65,9 +67,9 @@ impl CameraCapture {
                         "-t",
                         "0",
                         "--width",
-                        "1600",
+                        "1280",
                         "--height",
-                        "900",
+                        "720",
                         "--framerate",
                         "30",
                         "--codec",

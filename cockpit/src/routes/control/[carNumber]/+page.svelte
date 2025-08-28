@@ -207,6 +207,7 @@
             knobSize={56}
             x={leftX}
             y={leftY}
+            label="Throttle"
             start={() => {
                 // begin periodic sends while held
                 if (holdIntervalId == null) {
@@ -238,6 +239,7 @@
             knobSize={56}
             x={rightX}
             y={rightY}
+            label="Steering"
             start={() => {
                 if (holdIntervalId == null) {
                     holdIntervalId = setInterval(

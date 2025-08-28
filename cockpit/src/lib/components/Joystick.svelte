@@ -1,17 +1,19 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "@lucide/svelte";
 
     interface Props {
         size: number;
         knobSize: number;
         x: number;
         y: number;
+        label: "Throttle" | "Steering";
         start: () => void;
         input: (x: number, y: number) => void;
         end: () => void;
     }
 
-    let { size = 140, knobSize = 56, x = 0, y = 0, start, input, end }: Props = $props();
+    let { size = 140, knobSize = 56, x = 0, y = 0, label, start, input, end }: Props = $props();
 
     let root = $state<HTMLDivElement | null>(null);
     let rect = $state<DOMRect | null>(null);
@@ -109,12 +111,28 @@
 
 <div
     bind:this={root}
-    class="touch-none select-none"
+    class="relative touch-none select-none"
     style="width: {size}px; height: {size}px;"
     onpointerdown={pointerDown}
     onpointermove={pointerMove}
     onpointerup={pointerUp}
     onpointercancel={pointerUp}>
+    {#if label === "Throttle"}
+        <div class="absolute left-1/2 top-2 -translate-x-1/2 transform text-white/40 z-50">
+            <ChevronUp size={16} />
+        </div>
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 transform text-white/40 z-50">
+            <ChevronDown size={16} />
+        </div>
+    {:else if label === "Steering"}
+        <div class="absolute left-2 top-1/2 -translate-y-1/2 transform text-white/40 z-50">
+            <ChevronLeft size={16} />
+        </div>
+        <div class="absolute right-2 top-1/2 -translate-y-1/2 transform text-white/40 z-50">
+            <ChevronRight size={16} />
+        </div>
+    {/if}
+
     <div
         class="border-white/6 bg-white/4 relative flex items-center justify-center rounded-full border backdrop-blur"
         style="width: {size}px; height: {size}px;">

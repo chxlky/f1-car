@@ -1,12 +1,12 @@
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 
-use futures::StreamExt;
-use log::{error, debug, info};
+use log::{debug, error, info};
 use tokio::net::{TcpListener, UdpSocket};
 use tokio::sync::mpsc::{self, error::TrySendError, Receiver};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
+use tokio_stream::StreamExt;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -131,7 +131,6 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                 match maybe {
                     Some(s) => {
                         last_sample_time = Instant::now();
-                        // heavy math in Rust
                         let mut x = s.x;
                         let mut y = s.y;
 
