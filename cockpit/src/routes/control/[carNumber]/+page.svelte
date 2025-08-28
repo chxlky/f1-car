@@ -8,6 +8,7 @@
     import { startCamera, stopCamera } from "$lib/services/camera";
     import { ChevronLeft } from "@lucide/svelte";
     import { vibrate } from "@tauri-apps/plugin-haptics";
+    import { info, error } from "@tauri-apps/plugin-log";
     import Joystick from "$lib/components/Joystick.svelte";
     import VideoStream from "$lib/components/VideoStream.svelte";
 
@@ -32,7 +33,7 @@
             .setOrientation("Landscape")
             .then(async (res) => {
                 if (res.status === "error") {
-                    console.error("Failed to set orientation to Landscape:", res.error);
+                    error(`Failed to set orientation to Landscape: ${res.error}`);
                 }
 
                 car = f1DiscoveryService.getCarByNumber(Number(carNumber)) ?? null;
@@ -44,37 +45,35 @@
                         .startJoystickService(9001, radioAddr)
                         .then((res) => {
                             if (res.status === "error") {
-                                console.error("Failed to start joystick service:", res.error);
+                                error(`Failed to start joystick service: ${res.error}`);
                             } else {
-                                console.log("Joystick service started for", radioAddr);
+                                info(`Joystick service started for ${radioAddr}`);
                             }
 
                             // open a local websocket to the Tauri joystick service so UI samples get forwarded
                             startJoystickWs();
                         })
-                        .catch((e: unknown) =>
-                            console.error("Failed to start joystick service:", e)
-                        );
+                        .catch((e: unknown) => error(`Failed to start joystick service: ${e}`));
                 }
 
                 await connect().then(() => {
                     connectionStatus = "Connected";
-                    console.log("Connected to car", car?.number);
+                    info(`Connected to car ${car?.number}`);
                 });
             })
             .catch(() => {
-                console.error("Error setting orientation to Landscape");
+                error("Error setting orientation to Landscape");
             });
 
         // Start camera stream automatically
         if (car?.ip) {
-            console.log("Starting camera stream for", car.ip);
+            info(`Starting camera stream for ${car.ip}`);
             const result = await startCamera(car.ip);
-            console.log("startCamera result:", result);
+            info(`startCamera result: ${JSON.stringify(result)}`);
             if (result.success) {
                 isStreaming = true;
             } else {
-                console.error("Failed to start camera stream:", result);
+                error(`Failed to start camera stream: ${JSON.stringify(result)}`);
             }
         }
     });
@@ -84,11 +83,11 @@
             .setOrientation("Portrait")
             .then((res) => {
                 if (res.status === "error") {
-                    console.error("Failed to set orientation to Portrait:", res.error);
+                    error(`Failed to set orientation to Portrait: ${res.error}`);
                 }
             })
             .catch(() => {
-                console.error("Error setting orientation to Portrait");
+                error("Error setting orientation to Portrait");
             });
 
         if (car) {
@@ -100,7 +99,7 @@
                     await disconnect();
                 })
                 .catch((err) => {
-                    console.error("Error disconnecting on destroy:", err);
+                    error(`Error disconnecting on destroy: ${err}`);
                 });
         }
 
@@ -128,7 +127,7 @@
         f1DiscoveryService.selectedConnection = "Connecting";
         await commands.connectToCar(car.id).then((res) => {
             if (res.status === "error") {
-                console.error("Failed to connect:", res.error);
+                error(`Failed to connect: ${res.error}`);
                 connectionStatus = "Disconnected";
                 return;
             }
@@ -157,18 +156,18 @@
                 onclick={async () => {
                     // set portrait, stop joystick service (rust) and close JS websocket before navigating
                     await commands.setOrientation("Portrait").catch((e) => {
-                        console.error("Failed to set orientation to Portrait on back:", e);
+                        error(`Failed to set orientation to Portrait on back: ${e}`);
                     });
 
                     await commands.stopJoystickService().catch((e) => {
-                        console.warn("Failed to stop joystick service via commands API:", e);
+                        info(`Failed to stop joystick service via commands API: ${e}`);
                     });
 
                     // close local joystick websocket (JS sender)
                     try {
                         closeJoystickWs();
                     } catch (e) {
-                        console.warn("Error closing joystick WS on back:", e);
+                        info(`Error closing joystick WS on back: ${e}`);
                     }
 
                     await vibrate(100).then(() => goto("/#"));

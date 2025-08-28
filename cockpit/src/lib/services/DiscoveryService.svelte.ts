@@ -1,5 +1,6 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { SvelteMap as Map } from "svelte/reactivity";
+import { info, error } from "@tauri-apps/plugin-log";
 import {
     commands,
     events,
@@ -32,7 +33,7 @@ export class F1CarDiscoveryService {
     }
 
     async startDiscovery(): Promise<void> {
-        console.log("Starting mDNS discovery...");
+        info("Starting mDNS discovery...");
 
         try {
             this.error = undefined;
@@ -55,13 +56,13 @@ export class F1CarDiscoveryService {
     }
 
     async stopDiscovery(): Promise<void> {
-        console.log("Stopping mDNS discovery...");
+        info("Stopping mDNS discovery...");
 
         try {
             this.error = undefined;
             await commands.stopDiscovery().then((res) => {
                 if (res.status === "error") {
-                    console.error(`Failed to stop discovery: ${res.error.message}`);
+                    error(`Failed to stop discovery: ${res.error.message}`);
                 }
             });
 
@@ -70,7 +71,7 @@ export class F1CarDiscoveryService {
             await this.cleanupEventListeners();
         } catch (err) {
             this.error = `Failed to stop discovery: ${err}`;
-            console.error(this.error);
+            error(this.error);
         }
     }
 
@@ -96,7 +97,7 @@ export class F1CarDiscoveryService {
             return Array.from(this.cars.values());
         } catch (err) {
             this.error = `Failed to refresh cars: ${err}`;
-            console.error(this.error);
+            error(this.error);
 
             return [];
         }
@@ -110,7 +111,7 @@ export class F1CarDiscoveryService {
             .getCarById(carId)
             .then((res) => {
                 if (res.status === "error") {
-                    console.error(`Failed to get car: ${res.error?.message ?? res.error}`);
+                    error(`Failed to get car: ${res.error?.message ?? res.error}`);
                     return null;
                 }
 
@@ -123,7 +124,7 @@ export class F1CarDiscoveryService {
                 return null;
             })
             .catch((err) => {
-                console.error(`Error getting car by ID: ${err}`);
+                error(`Error getting car by ID: ${err}`);
                 return null;
             });
     }
@@ -133,7 +134,7 @@ export class F1CarDiscoveryService {
             .isDiscoveryRunning()
             .then((res) => {
                 if (res.status === "error") {
-                    console.error(`Failed to check running status: ${res.error}`);
+                    error(`Failed to check running status: ${res.error}`);
                     this.isRunning = false;
                     return false;
                 }
@@ -142,7 +143,7 @@ export class F1CarDiscoveryService {
                 return this.isRunning;
             })
             .catch((err) => {
-                console.error(`Error checking discovery status: ${err}`);
+                error(`Error checking discovery status: ${err}`);
                 this.isRunning = false;
                 return false;
             });
@@ -193,7 +194,7 @@ export class F1CarDiscoveryService {
             }
             // notify listeners with the updated derived list/count
             this.notifyCarListeners();
-            console.log(
+            info(
                 `mDNS: Car discovered: #${data.car.number} ${data.car.driver} (${data.car.team}) id=${data.car.id} ip=${data.car.ip}`
             );
         });
@@ -205,7 +206,7 @@ export class F1CarDiscoveryService {
                 this.selectedConnection = data.car.connectionStatus;
             }
             this.notifyCarListeners();
-            console.log(`mDNS: Car updated: id=${data.car.id} #${data.car.number}`);
+            info(`mDNS: Car updated: id=${data.car.id} #${data.car.number}`);
         });
 
         const unlistenOffline = await events.carOfflineEvent.listen((event) => {
@@ -216,7 +217,7 @@ export class F1CarDiscoveryService {
                     this.selectedConnection = data.car.connectionStatus;
                 }
                 this.notifyCarListeners();
-                console.log(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
+                info(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
             }
         });
 
@@ -228,12 +229,12 @@ export class F1CarDiscoveryService {
                 this.selectCar(undefined);
             }
             this.notifyCarListeners();
-            console.log(`mDNS: Car removed: ${data.carId}`);
+            info(`mDNS: Car removed: ${data.carId}`);
         });
 
         const unlistenStatus = await events.discoveryStatusEvent.listen((event) => {
             const data = event.payload;
-            console.log(`Discovery status: ${data.message} (running: ${data.isRunning})`);
+            info(`Discovery status: ${data.message} (running: ${data.isRunning})`);
             this.isRunning = data.isRunning;
             this.notifyStatusListeners(data);
         });

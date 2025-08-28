@@ -2,6 +2,7 @@
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import { RefreshCcw } from "@lucide/svelte";
     import { vibrate } from "@tauri-apps/plugin-haptics";
+    import { info } from "@tauri-apps/plugin-log";
 </script>
 
 <header class="mt-5 bg-f1-dark p-8">
@@ -14,7 +15,7 @@
                 class="z-50 rounded-full p-2 transition-all hover:bg-gray-700 active:scale-95 active:bg-gray-500"
                 onclick={async () => {
                     await vibrate(100);
-                    console.log("Refresh clicked");
+                    info("Refresh clicked");
                     f1DiscoveryService.refreshCars();
                 }}>
                 <RefreshCcw />

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
     import { goto } from "$app/navigation";
+    import { info, error } from "@tauri-apps/plugin-log";
     import { type F1Car, commands } from "$lib/bindings";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import CarCard from "$lib/components/CarCard.svelte";
@@ -24,7 +25,7 @@
         try {
             await f1DiscoveryService.checkIsRunning();
             unsubscribeStatus = f1DiscoveryService.onStatusChanged((status) => {
-                console.log("Status changed:", status);
+                info(`Status changed: ${status}`);
             });
 
             unsubscribeCars = f1DiscoveryService.onCarsChanged((cars, count) => {
@@ -38,7 +39,7 @@
                 await f1DiscoveryService.refreshCars();
             }
         } catch (err) {
-            console.error("Failed to initialize discovery:", err);
+            error(`Failed to initialize discovery: ${err}`);
         }
     });
 
@@ -53,7 +54,7 @@
 
         await commands.connectToCar(car.id).then((res) => {
             if (res.status === "error") {
-                console.error("Failed to connect:", res.error);
+                error(`Failed to connect: ${res.error}`);
                 f1DiscoveryService.selectCar(undefined);
                 return res;
             }

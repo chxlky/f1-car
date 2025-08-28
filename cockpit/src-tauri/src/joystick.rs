@@ -182,7 +182,7 @@ async fn processor_task(mut rx: Receiver<Sample>, pi_addr: SocketAddr) {
                     buf[0..4].copy_from_slice(&seq.to_le_bytes());
                     buf[4..6].copy_from_slice(&0i16.to_le_bytes());
                     buf[6..8].copy_from_slice(&0i16.to_le_bytes());
-                    info!("Watchdog idle send seq={} bytes={:02x?}", seq, &buf);
+                    debug!("Watchdog idle send seq={} bytes={:02x?}", seq, &buf);
                     let _ = udp.send_to(&buf, &pi_addr).await;
                     seq = seq.wrapping_add(1);
                 }

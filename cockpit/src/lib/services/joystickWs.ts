@@ -1,3 +1,5 @@
+import { info, error, debug } from "@tauri-apps/plugin-log";
+
 let ws: WebSocket | null = null;
 let wsRetryTimer: number | null = null;
 let wsConnectAttempts = 0;
@@ -17,46 +19,46 @@ export function startJoystickWs(port = 9001) {
             ws = new WebSocket(addr);
             ws.binaryType = "arraybuffer";
             ws.onopen = () => {
-                console.log("Joystick WS open", addr);
+                info(`Joystick WS open: ${addr}`);
                 if (wsRetryTimer != null) {
                     clearTimeout(wsRetryTimer);
                     wsRetryTimer = null;
                 }
             };
             ws.onclose = () => {
-                console.log("Joystick WS closed");
+                info("Joystick WS closed");
                 ws = null;
                 if (wsConnectAttempts < WS_MAX_RETRIES) {
                     wsRetryTimer = window.setTimeout(tryConnect, WS_RETRY_MS) as unknown as number;
                 } else {
-                    console.error("Joystick WS: max retries exceeded");
+                    error("Joystick WS: max retries exceeded");
                     wsRetryTimer = null;
                 }
             };
             ws.onerror = (e) => {
-                console.error("Joystick WS error", e);
+                error(`Joystick WS error: ${e}`);
                 if (ws) {
                     try {
                         ws.close();
                     } catch (err) {
-                        console.error("Error closing ws after error:", err);
+                        error(`Error closing ws after error: ${err}`);
                     }
                 }
                 ws = null;
                 if (wsConnectAttempts < WS_MAX_RETRIES) {
                     wsRetryTimer = window.setTimeout(tryConnect, WS_RETRY_MS) as unknown as number;
                 } else {
-                    console.error("Joystick WS: max retries exceeded");
+                    error("Joystick WS: max retries exceeded");
                     wsRetryTimer = null;
                 }
             };
         } catch (_e) {
-            console.error("Failed to start joystick WS:", _e);
+            error(`Failed to start joystick WS: ${_e}`);
             ws = null;
             if (wsConnectAttempts < WS_MAX_RETRIES) {
                 wsRetryTimer = window.setTimeout(tryConnect, WS_RETRY_MS) as unknown as number;
             } else {
-                console.error("Joystick WS: max retries exceeded");
+                error("Joystick WS: max retries exceeded");
                 wsRetryTimer = null;
             }
         }
@@ -70,7 +72,7 @@ export function closeJoystickWs() {
         try {
             ws.close();
         } catch (err) {
-            console.error("Error closing ws:", err);
+            error(`Error closing ws: ${err}`);
         }
         ws = null;
     }
@@ -97,6 +99,6 @@ export function sendJoystickSample(steering: number, throttle: number) {
     try {
         ws.send(buf);
     } catch (err) {
-        console.debug("Joystick WS send error:", err);
+        debug(`Joystick WS send error: ${err}`);
     }
 }
