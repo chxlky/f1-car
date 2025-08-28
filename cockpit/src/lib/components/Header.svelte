@@ -16,7 +16,7 @@
                 onclick={async () => {
                     await vibrate(100);
                     info("Refresh clicked");
-                    f1DiscoveryService.refreshCars();
+                    await f1DiscoveryService.refreshCars();
                 }}>
                 <RefreshCcw />
             </button>

@@ -92,7 +92,7 @@ export class F1CarDiscoveryService {
 
                 // notify listeners with the derived array and count
                 this.notifyCarListeners();
-            });
+            }).catch((err) => console.error(err));
 
             return Array.from(this.cars.values());
         } catch (err) {
@@ -211,14 +211,12 @@ export class F1CarDiscoveryService {
 
         const unlistenOffline = await events.carOfflineEvent.listen((event) => {
             const data = event.payload;
-            if (this.cars.has(data.car.id)) {
-                this.cars.set(data.car.id, data.car);
-                if (this.selectedCarId === data.car.id) {
-                    this.selectedConnection = data.car.connectionStatus;
-                }
-                this.notifyCarListeners();
-                info(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
-            }
+            info(`mDNS: Car offline: id=${data.car.id} #${data.car.number}`);
+
+            // Automatically refresh the car list to remove offline cars
+            this.refreshCars().catch((err) => {
+                error(`Failed to refresh cars after offline event: ${err}`);
+            });
         });
 
         const unlistenRemoved = await events.carRemovedEvent.listen((event) => {

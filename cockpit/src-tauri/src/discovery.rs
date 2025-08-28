@@ -223,8 +223,13 @@ impl DiscoveryService {
         // find the car id from the fullname mapping
         let mut map_guard = fullnames.lock().unwrap();
         if let Some(car_id) = map_guard.remove(fullname) {
-            let cars_guard = cars.lock().unwrap();
-            if let Some(car) = cars_guard.get(&car_id) {
+            // remove the car from the map
+            let removed_car = {
+                let mut cars_guard = cars.lock().unwrap();
+                cars_guard.remove(&car_id)
+            };
+
+            if let Some(car) = removed_car {
                 CarOfflineEvent { car: car.clone() }
                     .emit(handle)
                     .context("Failed to emit car-offline event")?;
