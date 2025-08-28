@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@font-face {
+    font-family: "Formula1";
+    src: url("/fonts/f1.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Northwell";
+    src: url("/fonts/Northwell-Alt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "KHInterference";
+    src: url("/fonts/KHInterference-Bold.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@theme {
+    --font-f1:
+        "Formula1", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+        "DejaVu Sans Mono", monospace;
+
+    --font-f1-cursive: "Northwell", ui-monospace;
+
+    --font-f1-block: "KHInterference", ui-monospace;
+
+    --color-f1-red: #e10600;
+    --color-f1-red-light: #ff3b30;
+    --color-f1-dark: #15151d;
+    --color-f1-border: #3d3d4f;
+}

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
+use serde::{Deserialize, Serialize};
 use std::{io::ErrorKind, net::SocketAddr, sync::Arc, time::Duration};
 use telemetry::{CarConfiguration, ControlMessage};
 use tokio::{
@@ -7,10 +8,11 @@ use tokio::{
     sync::{Mutex, broadcast},
     time::timeout,
 };
+use tokio_util::sync::CancellationToken;
 
 use crate::{config::ConfigManager, discovery::DiscoveryService};
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 enum ClientMessage {
     #[serde(rename = "control")]
@@ -23,7 +25,7 @@ enum ClientMessage {
     Ping { timestamp: u64 },
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(Serialize, Debug)]
 #[serde(tag = "type")]
 enum ServerMessage {
     #[serde(rename = "config")]
@@ -82,10 +84,7 @@ impl RadioServer {
     ) -> Result<()> {
         match message {
             ClientMessage::Control(control_msg) => {
-                // Broadcast control message to all subscribers (including UART/STM32 handler)
-                /* if let Err(e) = self.control_tx.send(control_msg.clone()) {
-                    error!("Failed to broadcast control message: {e}");
-                } */
+                // TODO: Broadcast control message to all UART
                 debug!("Received control message: {control_msg:?}");
             }
             ClientMessage::ConfigUpdate { config } => {
@@ -177,7 +176,7 @@ impl RadioServer {
         }
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self, cancel_token: CancellationToken) -> Result<()> {
         info!("Starting Radio Server...");
 
         let car_config = self.get_car_config().await;
@@ -187,7 +186,6 @@ impl RadioServer {
         );
 
         info!("Camera streaming is handled by UDP streamer on port 8080");
-        info!("WebSocket streaming is available on port 3030");
 
         {
             let mut discovery_service = self.discovery_service.lock().await;
@@ -201,68 +199,97 @@ impl RadioServer {
         info!("UDP server listening on 0.0.0.0:8080");
 
         let socket = Arc::new(socket);
-
         let mut buffer = vec![0u8; 65507]; // Max UDP payload size
 
         loop {
-            match socket.recv_from(&mut buffer).await {
-                Ok((len, client_addr)) => {
-                    let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
-                    debug!("UDP message received from {client_addr}: {data_str}");
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    info!("Cancellation requested, breaking server loop");
+                    break;
+                }
+                result = socket.recv_from(&mut buffer) => {
+                    match result {
+                        Ok((len, client_addr)) => {
+                            let data_str = str::from_utf8(&buffer[..len]).unwrap_or("<invalid UTF-8>");
+                            trace!("UDP message received from {client_addr}: {data_str}");
 
-                    // Add client to connected list if not already present
-                    {
-                        let mut client = self.connected_client.lock().await;
-                        match *client {
-                            None => {
-                                *client = Some(client_addr);
-                                info!("Client connected: {client_addr}");
+                            // Add client to connected list if not already present
+                            {
+                                let mut client = self.connected_client.lock().await;
+                                match *client {
+                                    None => {
+                                        *client = Some(client_addr);
+                                        info!("Client connected: {client_addr}");
 
-                                self.send_initial_config(&socket, client_addr).await;
+                                        self.send_initial_config(&socket, client_addr).await;
+                                    }
+                                    Some(existing_addr) => {
+                                        if existing_addr != client_addr {
+                                            info!(
+                                                "Previous client {existing_addr} replaced by new client {client_addr}"
+                                            );
+                                            *client = Some(client_addr);
+
+                                            self.send_initial_config(&socket, client_addr).await;
+                                        }
+                                    }
+                                }
                             }
-                            Some(existing_addr) => {
-                                if existing_addr != client_addr {
-                                    info!(
-                                        "Previous client {existing_addr} replaced by new client {client_addr}"
-                                    );
-                                    *client = Some(client_addr);
 
-                                    self.send_initial_config(&socket, client_addr).await;
+                            if len == 8 {
+                                let seq = u32::from_le_bytes([
+                                    buffer[0], buffer[1], buffer[2], buffer[3],
+                                ]);
+                                let left = i16::from_le_bytes([buffer[4], buffer[5]]);
+                                let right = i16::from_le_bytes([buffer[6], buffer[7]]);
+
+                                // Convert i16 -> -100..100 range for ControlMessage
+                                let steering = ((right as f32) / 32767.0_f32 * 100.0).round() as i8;
+                                let throttle = ((left as f32) / 32767.0_f32 * 100.0).round() as i8;
+
+                                let ctrl = ControlMessage { steering, throttle };
+                                debug!("Received joystick from {client_addr}: seq={} {:?}", seq, ctrl);
+
+                                if self.control_tx.receiver_count() > 0 {
+                                    let _ = self.control_tx.send(ctrl);
+                                } else {
+                                    trace!("No control subscribers; skipping send");
+                                }
+                                continue;
+                            }
+
+                            // Otherwise try to parse as JSON ClientMessage
+                            let message_str = match std::str::from_utf8(&buffer[..len]) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    error!("Invalid UTF-8 from {client_addr}: {e}");
+                                    continue;
+                                }
+                            };
+
+                            match serde_json::from_str::<ClientMessage>(message_str) {
+                                Ok(client_message) => {
+                                    if let Err(e) = self
+                                        .handle_client_message(client_message, client_addr, &socket)
+                                        .await
+                                    {
+                                        error!("Error handling message from {client_addr}: {e}");
+                                    }
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Failed to parse message from {client_addr}: {e} - Raw: {message_str}",
+                                    );
                                 }
                             }
                         }
-                    }
-
-                    // Parse and handle the message
-                    let message_str = match std::str::from_utf8(&buffer[..len]) {
-                        Ok(s) => s,
                         Err(e) => {
-                            error!("Invalid UTF-8 from {client_addr}: {e}");
-                            continue;
-                        }
-                    };
+                            error!("Error receiving UDP message: {e}");
 
-                    match serde_json::from_str::<ClientMessage>(message_str) {
-                        Ok(client_message) => {
-                            if let Err(e) = self
-                                .handle_client_message(client_message, client_addr, &socket)
-                                .await
-                            {
-                                error!("Error handling message from {client_addr}: {e}");
+                            if matches!(e.kind(), ErrorKind::AddrNotAvailable | ErrorKind::AddrInUse) {
+                                break;
                             }
                         }
-                        Err(e) => {
-                            error!(
-                                "Failed to parse message from {client_addr}: {e} - Raw: {message_str}",
-                            );
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!("Error receiving UDP message: {e}");
-
-                    if matches!(e.kind(), ErrorKind::AddrNotAvailable | ErrorKind::AddrInUse) {
-                        break;
                     }
                 }
             }
@@ -277,10 +304,10 @@ impl Drop for RadioServer {
     fn drop(&mut self) {
         info!("RadioServer dropped, cleaning up resources");
 
-        if let Ok(mut discovery_service) = self.discovery_service.try_lock() {
-            if let Err(e) = discovery_service.stop_advertising() {
-                error!("Failed to stop mDNS advertising: {e}");
-            }
+        if let Ok(mut discovery_service) = self.discovery_service.try_lock()
+            && let Err(e) = discovery_service.stop_advertising()
+        {
+            error!("Failed to stop mDNS advertising: {e}");
         }
     }
 }

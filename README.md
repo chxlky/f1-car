@@ -2,7 +2,7 @@
 
 A modular, real-time, and low-level Rust-based RC F1 car project, powered by a Raspberry Pi 4B and an STM32 microcontroller.
 
-This project is structured to separate concerns between real-time control, networking, and frontend interaction. It uses a modern Rust toolchain, an RTOS for embedded control, and a Flutter app for user interaction.
+This project is structured to separate concerns between real-time control, networking, and frontend interaction. It uses a modern Rust toolchain, an RTOS for embedded control, and a Tauri app for user interaction.
 
 ## 📦 Project Structure
 
@@ -11,8 +11,9 @@ f1-car/
 ├── telemetry/ # Shared Rust types and protocols
 ├── powertrain/ # STM32 firmware (Rust + Embassy RTOS)
 ├── radio/ # Raspberry Pi app (networking, camera relay)
-├── cockpit/ # Flutter app (UI, discovery, control)
+├── cockpit/ # Tauri app (UI, discovery, control)
 ├── logbook/ # Documentation and development notes
+└── scripts/ # Build and deployment scripts
 ```
 
 ## 🔧 Responsibilities
@@ -32,9 +33,9 @@ f1-car/
 - Reads IMU data for orientation sensing
 - Sends telemetry back to the Pi over UART
 
-### 📱 `cockpit/` (Flutter App)
+### 📱 `cockpit/` (Tauri App)
 
-- Flutter-powered mobile UI
+- Tauri-powered mobile and desktop UI
 - Receives live telemetry data
 - Displays camera feed
 - Sends control inputs (steering, throttle) to the car
@@ -43,6 +44,11 @@ f1-car/
 
 ## 🛠 Development Environment
 
-1) Install [Nix Package Manager](https://nixos.org/download/)
-2) Enable flakes in Nix config
-3) Run `nix develop` in the project root to enter the development shell
+```bash
+
+paru -S aarch64-linux-musl arm-none-eabi-gcc
+sudo pacman -S aarch64-linux-gnu-gcc
+rustup target add aarch64-unknown-linux-musl
+rustup target add thumbv7em-none-eabihf
+
+```

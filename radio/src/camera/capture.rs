@@ -1,5 +1,5 @@
-use anyhow::Result;
-use log::{error, info};
+use anyhow::{Result, anyhow};
+use log::{error, info, trace};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -9,9 +9,11 @@ use tokio::{
     time::sleep,
 };
 
+use crate::camera::FrameBuffer;
+
 #[derive(Clone)]
 pub struct CameraCapture {
-    frame_buffer: Arc<Mutex<Option<Vec<u8>>>>,
+    frame_buffer: FrameBuffer,
     is_running: Arc<Mutex<bool>>,
 }
 
@@ -54,7 +56,7 @@ impl CameraCapture {
                     let running = is_running.lock().unwrap();
                     *running
                 };
-                
+
                 if !should_continue {
                     break;
                 }
@@ -62,15 +64,21 @@ impl CameraCapture {
                 // Start the camera process
                 let mut child = match process::Command::new("rpicam-vid")
                     .args([
-                        "-t", "0",
-                        "--width", "1600",
-                        "--height", "900",
-                        "--framerate", "30",
-                        "--codec", "mjpeg",
+                        "-t",
+                        "0",
+                        "--width",
+                        "1280",
+                        "--height",
+                        "720",
+                        "--framerate",
+                        "30",
+                        "--codec",
+                        "mjpeg",
                         "--hflip",
                         "--vflip",
                         "--nopreview",
-                        "-o", "-",
+                        "-o",
+                        "-",
                     ])
                     .stdout(Stdio::piped())
                     .stderr(Stdio::null())
@@ -95,7 +103,7 @@ impl CameraCapture {
                             let running = is_running.lock().unwrap();
                             *running
                         };
-                        
+
                         if !should_continue {
                             let _ = child.kill().await;
                             break;
@@ -122,7 +130,7 @@ impl CameraCapture {
                                             frame_counter += 1;
 
                                             if frame_counter % 100 == 0 {
-                                                info!("Captured {frame_counter} frames");
+                                                trace!("Captured {frame_counter} frames");
                                             }
                                         }
                                     } else {
@@ -146,7 +154,7 @@ impl CameraCapture {
                     let running = is_running.lock().unwrap();
                     *running
                 };
-                
+
                 if !should_restart {
                     break;
                 }
@@ -160,7 +168,7 @@ impl CameraCapture {
                 let mut running = is_running.lock().unwrap();
                 *running = false;
             }
-            
+
             info!("Camera capture task ended");
         });
 
@@ -184,6 +192,14 @@ impl CameraCapture {
 
         info!("Camera capture stopped");
         Ok(())
+    }
+
+    pub fn is_running(&self) -> Result<bool> {
+        let running = self
+            .is_running
+            .lock()
+            .map_err(|e| anyhow!("Mutex poisoned: {}", e))?;
+        Ok(*running)
     }
 
     fn find_jpeg_start(buffer: &[u8]) -> Option<usize> {
