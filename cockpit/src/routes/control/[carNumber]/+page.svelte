@@ -5,7 +5,6 @@
     import { type ConnectionStatus, type F1Car, commands } from "$lib/bindings";
     import { f1DiscoveryService } from "$lib/services/DiscoveryService.svelte";
     import { startJoystickWs, closeJoystickWs, sendJoystickSample } from "$lib/services/joystickWs";
-    import { startCamera, stopCamera } from "$lib/services/camera";
     import { ChevronLeft } from "@lucide/svelte";
     import { vibrate } from "@tauri-apps/plugin-haptics";
     import { info, error } from "@tauri-apps/plugin-log";
@@ -25,8 +24,6 @@
 
     let holdIntervalId = $state<number | null>(null);
     const HOLD_SEND_HZ = 20; // send while held at 20Hz
-
-    let isStreaming = $state<boolean>(false);
 
     onMount(async () => {
         await commands
@@ -64,18 +61,6 @@
             .catch(() => {
                 error("Error setting orientation to Landscape");
             });
-
-        // Start camera stream automatically
-        if (car?.ip) {
-            info(`Starting camera stream for ${car.ip}`);
-            const result = await startCamera(car.ip);
-            info(`startCamera result: ${JSON.stringify(result)}`);
-            if (result.success) {
-                isStreaming = true;
-            } else {
-                error(`Failed to start camera stream: ${JSON.stringify(result)}`);
-            }
-        }
     });
 
     onDestroy(async () => {
@@ -110,14 +95,6 @@
         if (holdIntervalId != null) {
             clearInterval(holdIntervalId);
             holdIntervalId = null;
-        }
-
-        // Stop camera stream automatically
-        if (car?.ip) {
-            const result = await stopCamera(car.ip);
-            if (result.success) {
-                isStreaming = false;
-            }
         }
     });
 
@@ -195,9 +172,9 @@
         </div>
     </div>
 
-    {#if isStreaming && car?.ip}
+    {#if car?.ip}
         <div class="absolute left-1/2 top-20 -translate-x-1/2 transform">
-            <VideoStream streamUrl={`http://${car.ip}:8081/stream`} />
+            <VideoStream ip={car.ip} />
         </div>
     {/if}
 
