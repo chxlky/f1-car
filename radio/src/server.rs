@@ -10,7 +10,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::{config::ConfigManager, discovery::DiscoveryService};
+use crate::{config::ConfigManager, discovery::DiscoveryService, uart::UartHandler};
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
@@ -84,8 +84,8 @@ impl RadioServer {
     ) -> Result<()> {
         match message {
             ClientMessage::Control(control_msg) => {
-                // TODO: Broadcast control message to all UART
                 debug!("Received control message: {control_msg:?}");
+                let _ = self.control_tx.send(control_msg);
             }
             ClientMessage::ConfigUpdate { config } => {
                 info!(
@@ -200,6 +200,20 @@ impl RadioServer {
 
         let socket = Arc::new(socket);
         let mut buffer = vec![0u8; 65507]; // Max UDP payload size
+
+        let control_rx = self.control_tx.subscribe();
+        tokio::spawn(async move {
+            match UartHandler::new("/dev/ttyAMA0").await {
+                Ok(handler) => {
+                    if let Err(e) = handler.run(control_rx).await {
+                        error!("UART handler error {e}");
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to create UART handler: {e}");
+                }
+            }
+        });
 
         loop {
             tokio::select! {

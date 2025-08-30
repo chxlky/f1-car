@@ -12,8 +12,6 @@
     let isStreaming = $state<boolean>(false);
     let streamUrl = $derived(`http://${ip}:8081/stream`);
 
-    $inspect(isStreaming);
-
     onMount(async () => {
         info(`Starting camera feed for ${ip}`);
         await startCamera(ip).then((res) => {

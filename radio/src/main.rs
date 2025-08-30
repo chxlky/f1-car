@@ -8,6 +8,7 @@ mod camera;
 mod config;
 mod discovery;
 mod server;
+mod uart;
 
 use crate::accelerometer::Accelerometer;
 use crate::{camera::MjpegStreamer, server::RadioServer};
